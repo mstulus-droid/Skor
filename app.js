@@ -17,9 +17,11 @@ const DEFAULT_COUNTDOWN_MS = 300_000;
 const MAX_COUNTDOWN_MS = 5_940_000;
 const COUNTDOWN_SOUND_TRIGGER_MS = 6000; // 6 seconds before end
 
-// Sound files
+// Sound files - all sounds starting with "gol-"
 const GOL_SOUNDS = [
+  "sound/gol-okeh.mp3",
   "sound/gol-score-mario-coin.mp3",
+  "sound/gol-wow.mp3",
   "sound/gol-yey.mp3"
 ];
 const COUNTDOWN_SOUND = "sound/5s-countdown.mp3";
@@ -672,41 +674,60 @@ el.pickerOptions.addEventListener("click", (ev) => {
 });
 
 // Play Again button - now shows new game settings modal
-el.playAgainBtn.addEventListener("click", () => {
-  showNewGameModal();
-});
+if (el.playAgainBtn) {
+  el.playAgainBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    showNewGameModal();
+  });
+}
 
 // New Game Modal event listeners
-el.newGameBackdrop.addEventListener("click", hideNewGameModal);
-el.cancelNewGameBtn.addEventListener("click", hideNewGameModal);
-el.startNewGameBtn.addEventListener("click", startNewGame);
+if (el.newGameBackdrop) {
+  el.newGameBackdrop.addEventListener("click", hideNewGameModal);
+}
+if (el.cancelNewGameBtn) {
+  el.cancelNewGameBtn.addEventListener("click", hideNewGameModal);
+}
+if (el.startNewGameBtn) {
+  el.startNewGameBtn.addEventListener("click", startNewGame);
+}
 
 // Team selection in new game modal
-el.newGameTeamAOptions.addEventListener("click", (ev) => {
-  const option = ev.target.closest("[data-player]");
-  if (!option) return;
-  selectNewGameTeam('A', option.getAttribute("data-player"));
-});
-
-el.newGameTeamBOptions.addEventListener("click", (ev) => {
-  const option = ev.target.closest("[data-player]");
-  if (!option) return;
-  selectNewGameTeam('B', option.getAttribute("data-player"));
-});
-
-// Duration selection in new game modal
-document.querySelectorAll('#newGameModal .duration-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const minutes = parseInt(btn.dataset.minutes);
-    selectNewGameDuration(minutes);
+if (el.newGameTeamAOptions) {
+  el.newGameTeamAOptions.addEventListener("click", (ev) => {
+    const option = ev.target.closest("[data-player]");
+    if (!option) return;
+    selectNewGameTeam('A', option.getAttribute("data-player"));
   });
-});
+}
+
+if (el.newGameTeamBOptions) {
+  el.newGameTeamBOptions.addEventListener("click", (ev) => {
+    const option = ev.target.closest("[data-player]");
+    if (!option) return;
+    selectNewGameTeam('B', option.getAttribute("data-player"));
+  });
+}
+
+// Duration selection in new game modal - use event delegation
+if (el.newGameModal) {
+  el.newGameModal.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.duration-btn');
+    if (btn) {
+      const minutes = parseInt(btn.dataset.minutes);
+      selectNewGameDuration(minutes);
+    }
+  });
+}
 
 // Debug 15 seconds button
-el.debug15sBtn.addEventListener('click', () => {
-  newGameSettings.durationMinutes = 0.25; // 15 seconds
-  startNewGame();
-});
+if (el.debug15sBtn) {
+  el.debug15sBtn.addEventListener('click', () => {
+    newGameSettings.durationMinutes = 0.25; // 15 seconds
+    startNewGame();
+  });
+}
 
 // Close overlay on backdrop click (optional)
 el.winnerOverlay.addEventListener("click", (ev) => {
@@ -718,7 +739,7 @@ el.winnerOverlay.addEventListener("click", (ev) => {
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && !el.teamPickerModal.hidden) closeTeamPicker();
   if (ev.key === "Escape" && !el.winnerOverlay.hidden) hideWinnerOverlay();
-  if (ev.key === "Escape" && !el.newGameModal.hidden) hideNewGameModal();
+  if (ev.key === "Escape" && el.newGameModal && !el.newGameModal.hidden) hideNewGameModal();
 });
 
 // Handle window resize for confetti
