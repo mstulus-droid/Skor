@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<title>ScoreBoard Pro</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --p1: #00c6ff;
+    --p1-dark: #0070a0;
+    --p2: #ff416c;
+    --p2-dark: #a00030;
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --text: #ffffff;
+    --accent: #ffd700;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html, body {
+    width:100%; height:100%;
+    overflow:hidden;
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: var(--text);
+    touch-action: none;
+  }
+
+  /* ===== SCREEN MANAGER ===== */
+  .screen { position:fixed; inset:0; display:none; }
+  .screen.active { display:flex; }
+
+  /* ===== SETUP SCREEN ===== */
+  #setup {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 50% 0%, #1a1a2e 0%, var(--bg) 70%);
+    gap: 20px;
+    padding: 20px;
+  }
+
+  #setup h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 8vw, 3.5rem);
+    letter-spacing: 4px;
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: center;
+  }
+
+  .setup-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  .player-setup {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 2px solid transparent;
+  }
+  .player-setup.p1 { border-color: var(--p1); }
+  .player-setup.p2 { border-color: var(--p2); }
+
+  .player-setup label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+  .player-setup.p1 label { color: var(--p1); }
+  .player-setup.p2 label { color: var(--p2); }
+
+  .player-setup input {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #fff;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    width: 100%;
+    outline: none;
+  }
+
+  .emoji-picker {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .emoji-btn {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.05);
+    cursor: pointer;
+    font-size: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .emoji-btn.selected { border-color: var(--accent); background: rgba(255,215,0,0.15); }
+
+  .target-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 12px 16px;
+    width: 100%;
+    max-width: 500px;
+  }
+  .target-row label { font-weight: 600; opacity: 0.7; font-size: 0.85rem; }
+  .target-row input[type=range] { flex:1; accent-color: var(--accent); }
+  .target-val {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--accent);
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .btn-start {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 48px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 8px 30px rgba(0,198,255,0.3);
+  }
+  .btn-start:active { transform: scale(0.95); }
+
+  /* ===== GAME SCREEN ===== */
+  #game {
+    flex-direction: column;
+    user-select: none;
+  }
+
+  /* Scoreboard top bar */
+  #topbar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    padding: 0 12px;
+  }
+
+  #timer-display {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: color 0.2s;
+  }
+  .icon-btn:hover { color: #fff; }
+
+  /* Main score area - landscape split */
+  #score-area {
+    flex: 1;
+    display: flex;
+    margin-top: 36px;
+    position: relative;
+  }
+
+  .player-zone {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: filter 0.1s;
+  }
+  .player-zone:active { filter: brightness(1.2); }
+
+  #p1-zone {
+    background: linear-gradient(135deg, #003a5c 0%, #005a8a 50%, #0070a8 100%);
+  }
+  #p2-zone {
+    background: linear-gradient(135deg, #5c0020 0%, #8a003a 50%, #a00050 100%);
+  }
+
+  /* Animated background particles */
+  .zone-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .particle {
+    position: absolute;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: float-up linear infinite;
+  }
+  @keyframes float-up {
+    from { transform: translateY(120%) scale(0); opacity: 0.4; }
+    to { transform: translateY(-20%) scale(1.5); opacity: 0; }
+  }
+
+  .player-emoji-big {
+    font-size: clamp(1.5rem, 6vw, 3rem);
+    margin-bottom: 4px;
+    animation: bob 3s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .player-name-display {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: clamp(0.9rem, 3vw, 1.4rem);
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 8px;
+  }
+
+  .score-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 22vw, 12rem);
+    line-height: 1;
+    text-shadow: 0 0 60px rgba(255,255,255,0.3);
+    transition: transform 0.1s;
+    position: relative;
+  }
+
+  .score-number.pop {
+    animation: score-pop 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes score-pop {
+    0% { transform: scale(1); }
+    30% { transform: scale(1.3); }
+    60% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+
+  .score-delta {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .score-delta.show-delta {
+    animation: delta-float 1s ease-out forwards;
+  }
+  @keyframes delta-float {
+    0% { opacity:1; transform: translateY(0) scale(1); }
+    100% { opacity:0; transform: translateY(-50px) scale(1.4); }
+  }
+
+  .swipe-hint {
+    font-size: 0.7rem;
+    opacity: 0.4;
+    letter-spacing: 1px;
+    margin-top: 8px;
+    font-weight: 600;
+  }
+
+  /* Middle divider */
+  #divider {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    z-index: 50;
+    pointer-events: none;
+  }
+
+  .set-score-box {
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .set-score-box span {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+  }
+  .set-score-box .sep { opacity: 0.4; font-size: 0.9rem; }
+
+  /* ===== WIN OVERLAY ===== */
+  #win-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+  }
+  #win-overlay.show { display: flex; }
+
+  .win-emoji {
+    font-size: 5rem;
+    animation: win-bounce 0.5s ease-out;
+  }
+  .win-text {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 10vw, 5rem);
+    letter-spacing: 4px;
+    margin: 8px 0;
+  }
+  .win-subtext {
+    font-size: 1rem;
+    opacity: 0.6;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+  }
+  @keyframes win-bounce {
+    0% { transform: scale(0) rotate(-20deg); }
+    60% { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
+  .confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 199;
+  }
+
+  .win-btns { display: flex; gap: 12px; }
+  .win-btn {
+    padding: 12px 28px;
+    border-radius: 50px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.15s;
+  }
+  .win-btn:active { transform: scale(0.95); }
+  .win-btn.primary {
+    background: linear-gradient(135deg, var(--p1), var(--p2));
+    color: #fff;
+  }
+  .win-btn.secondary {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* ===== HISTORY PANEL ===== */
+  #history-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 16px;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 150;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+  #history-panel.open { transform: translateY(0); }
+
+  #history-panel h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+    color: var(--accent);
+  }
+
+  .history-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .history-tag {
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.75rem;
+  }
+  .tag-p1 { background: rgba(0,198,255,0.2); color: var(--p1); }
+  .tag-p2 { background: rgba(255,65,108,0.2); color: var(--p2); }
+  .tag-undo { background: rgba(255,215,0,0.15); color: var(--accent); }
+
+  .overlay-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 149;
+    display: none;
+  }
+  .overlay-bg.show { display: block; }
+
+  /* Flash effect */
+  .flash-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 180;
+    opacity: 0;
+  }
+  .flash-overlay.p1-flash { background: var(--p1); animation: flash-in 0.3s ease-out; }
+  .flash-overlay.p2-flash { background: var(--p2); animation: flash-in 0.3s ease-out; }
+  @keyframes flash-in {
+    0% { opacity: 0.4; }
+    100% { opacity: 0; }
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 300;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Game set badge */
+  .set-badge {
+    position: absolute;
+    top: 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    opacity: 0.5;
+  }
+  #p1-zone .set-badge { right: 12px; color: var(--p1); }
+  #p2-zone .set-badge { left: 12px; color: var(--p2); }
+
+  /* Minus button */
+  .minus-btn {
+    position: absolute;
+    bottom: 10px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    pointer-events: all;
+  }
+  .minus-btn:active { background: rgba(0,0,0,0.6); color:#fff; }
+
+  /* Ripple */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-anim 0.6s linear;
+    pointer-events: none;
+  }
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Landscape orientation message */
+  #rotate-msg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  #rotate-msg .rot-icon { font-size: 3rem; animation: spin-phone 1.5s ease-in-out infinite; }
+  @keyframes spin-phone {
+    0%,100% { transform: rotate(0); }
+    50% { transform: rotate(-90deg); }
+  }
+  #rotate-msg p { font-family: 'Bebas Neue',sans-serif; font-size: 1.4rem; letter-spacing: 2px; opacity:0.7; }
+
+  @media (orientation: portrait) and (max-height: 600px) {
+    /* very small portrait - show rotate msg */
+  }
+</style>
+</head>
+<body>
+
+<!-- Rotate message -->
+<div id="rotate-msg">
+  <div class="rot-icon">📱</div>
+  <p>Putar Layar ke Landscape</p>
+</div>
+
+<!-- Flash overlay -->
+<div class="flash-overlay" id="flash"></div>
+
+<!-- Confetti canvas -->
+<canvas class="confetti-canvas" id="confetti-canvas"></canvas>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ==================== SETUP SCREEN ==================== -->
+<div id="setup" class="screen active">
+  <h1>⚡ ScoreBoard Pro</h1>
+
+  <div class="setup-grid">
+    <!-- Player 1 -->
+    <div class="player-setup p1">
+      <label>Player 1</label>
+      <input type="text" id="p1-name" value="Player 1" maxlength="12">
+      <div class="emoji-picker" id="p1-emoji-picker"></div>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="player-setup p2">
+      <label>Player 2</label>
+      <input type="text" id="p2-name" value="Player 2" maxlength="12">
+      <div class="emoji-picker" id="p2-emoji-picker"></div>
+    </div>
+  </div>
+
+  <div class="target-row">
+    <label>TARGET SKOR:</label>
+    <input type="range" id="target-range" min="5" max="50" step="5" value="21">
+    <div class="target-val" id="target-val">21</div>
+  </div>
+
+  <button class="btn-start" onclick="startGame()">MULAI GAME</button>
+</div>
+
+<!-- ==================== GAME SCREEN ==================== -->
+<div id="game" class="screen">
+  <!-- Top bar -->
+  <div id="topbar">
+    <button class="icon-btn" onclick="toggleHistory()">📋</button>
+    <button class="icon-btn" onclick="undoScore()">↩</button>
+    <div id="timer-display">00:00</div>
+    <button class="icon-btn" id="timer-btn" onclick="toggleTimer()">▶</button>
+    <button class="icon-btn" onclick="resetGame()">🔄</button>
+    <button class="icon-btn" onclick="goSetup()">⚙</button>
+  </div>
+
+  <!-- Score area -->
+  <div id="score-area">
+    <!-- P1 Zone -->
+    <div class="player-zone" id="p1-zone">
+      <div class="zone-bg" id="p1-bg"></div>
+      <div class="set-badge" id="p1-sets">●</div>
+      <div class="player-emoji-big" id="p1-emoji-disp">🐸</div>
+      <div class="player-name-display" id="p1-name-disp">Player 1</div>
+      <div class="score-number" id="p1-score">0
+        <div class="score-delta" id="p1-delta">+1</div>
+      </div>
+      <div class="swipe-hint">TAP +1 • SWIPE ↓ -1</div>
+      <button class="minus-btn" id="p1-minus">−</button>
+    </div>
+
+    <!-- Divider -->
+    <div id="divider">
+      <div class="set-score-box">
+        <span id="set-p1" style="color:var(--p1)">0</span>
+        <span class="sep">:</span>
+        <span id="set-p2" style="color:var(--p2)">0</span>
+      </div>
+    </div>
+
+    <!-- P2 Zone -->
+    <div class="player-zone" id="p2-zone">
+      <div class="zone-bg" id="p2-bg"></div>
+      <div class="set-badge" id="p2-sets" style="left:auto;right:12px;color:var(--p2)">●</div>
+      <div class="player-emoji-big" id="p2-emoji-disp">🐄</div>
+      <div class="player-name-display" id="p2-name-disp">Player 2</div>
+      <div class="score-number" id="p2-score">0
+        <div class="score-delta" id="p2-delta">+1</div>
+      </div>
+      <div class="swipe-hint">TAP +1 • SWIPE ↓ -1</div>
+      <button class="minus-btn" id="p2-minus">−</button>
+    </div>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div id="win-overlay">
+  <div class="win-emoji" id="win-emoji">🏆</div>
+  <div class="win-text" id="win-text">PLAYER 1 MENANG!</div>
+  <div class="win-subtext" id="win-subtext">SKOR 21 - 15</div>
+  <div class="win-btns">
+    <button class="win-btn primary" onclick="nextSet()">SET BERIKUTNYA</button>
+    <button class="win-btn secondary" onclick="goSetup()">SELESAI</button>
+  </div>
+</div>
+
+<!-- History panel -->
+<div class="overlay-bg" id="overlay-bg" onclick="closeHistory()"></div>
+<div id="history-panel">
+  <h3>📜 Riwayat Poin</h3>
+  <div id="history-list"></div>
+</div>
+
+<script>
+// ==================== STATE ====================
+const EMOJIS = ['🐸','🐄','🦁','🐯','🦊','🐺','🐻','🦄','🐲','⚡','🔥','💎','👑','🎯','🚀','💀'];
+let state = {
+  p1: { name: 'Player 1', emoji: '🐸', score: 0, sets: 0 },
+  p2: { name: 'Player 2', emoji: '🐄', score: 0, sets: 0 },
+  target: 21,
+  history: [],
+  timerSec: 0,
+  timerRunning: false,
+  timerInterval: null,
+  selectedEmoji: { p1: 0, p2: 1 }
+};
+
+// ==================== AUDIO ====================
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+  return audioCtx;
+}
+
+function playBeep(freq, type, dur, vol, delay=0) {
+  try {
+    const ctx = getAudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + dur + 0.05);
+  } catch(e){}
+}
+
+function soundScore() {
+  playBeep(523, 'sine', 0.12, 0.4);
+  playBeep(784, 'sine', 0.12, 0.4, 0.12);
+}
+
+function soundMinus() {
+  playBeep(330, 'sawtooth', 0.15, 0.3);
+  playBeep(220, 'sawtooth', 0.1, 0.2, 0.1);
+}
+
+function soundWin() {
+  const notes = [523,659,784,1047];
+  notes.forEach((f,i) => playBeep(f, 'sine', 0.3, 0.5, i*0.12));
+  setTimeout(() => {
+    playBeep(1047,'sine',0.5,0.6);
+    playBeep(1319,'sine',0.5,0.6,0.1);
+    playBeep(1568,'sine',0.7,0.7,0.2);
+  }, 600);
+}
+
+function soundUndo() {
+  playBeep(440,'triangle',0.1,0.3);
+  playBeep(330,'triangle',0.1,0.3,0.1);
+}
+
+// ==================== EMOJI PICKERS ====================
+function initEmojis() {
+  ['p1','p2'].forEach(p => {
+    const container = document.getElementById(`${p}-emoji-picker`);
+    container.innerHTML = '';
+    EMOJIS.forEach((e, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'emoji-btn' + (state.selectedEmoji[p] === i ? ' selected' : '');
+      btn.textContent = e;
+      btn.onclick = () => {
+        state.selectedEmoji[p] = i;
+        state[p].emoji = e;
+        container.querySelectorAll('.emoji-btn').forEach((b,j) => {
+          b.className = 'emoji-btn' + (j===i?' selected':'');
+        });
+      };
+      container.appendChild(btn);
+    });
+  });
+}
+
+// Target range
+document.getElementById('target-range').addEventListener('input', function() {
+  document.getElementById('target-val').textContent = this.value;
+  state.target = parseInt(this.value);
+});
+
+// ==================== PARTICLES ====================
+function initParticles(zoneId, color) {
+  const zone = document.getElementById(zoneId);
+  zone.innerHTML = '';
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `
+      left: ${Math.random()*100}%;
+      bottom: 0;
+      background: ${color};
+      width: ${4+Math.random()*8}px;
+      height: ${4+Math.random()*8}px;
+      animation-duration: ${2+Math.random()*4}s;
+      animation-delay: ${-Math.random()*4}s;
+    `;
+    zone.appendChild(p);
+  }
+}
+
+// ==================== SETUP -> GAME ====================
+function startGame() {
+  state.p1.name = document.getElementById('p1-name').value || 'Player 1';
+  state.p2.name = document.getElementById('p2-name').value || 'Player 2';
+  state.target = parseInt(document.getElementById('target-range').value);
+  showScreen('game');
+  initGameUI();
+}
+
+function initGameUI() {
+  document.getElementById('p1-name-disp').textContent = state.p1.name;
+  document.getElementById('p2-name-disp').textContent = state.p2.name;
+  document.getElementById('p1-emoji-disp').textContent = state.p1.emoji;
+  document.getElementById('p2-emoji-disp').textContent = state.p2.emoji;
+  updateScoreDisplay();
+  updateSets();
+  initParticles('p1-bg', 'rgba(0,198,255,0.6)');
+  initParticles('p2-bg', 'rgba(255,65,108,0.6)');
+  setupTouchHandlers();
+}
+
+// ==================== SCORE LOGIC ====================
+function addScore(player, val=1) {
+  const p = state[player];
+  const old = p.score;
+  p.score = Math.max(0, p.score + val);
+  if (p.score === old) return;
+
+  state.history.push({ player, val, p1: state.p1.score, p2: state.p2.score });
+
+  updateScoreDisplay();
+
+  if (val > 0) {
+    soundScore();
+    popScore(player);
+    flashZone(player);
+    showDelta(player, '+'+val);
+  } else {
+    soundMinus();
+    showDelta(player, val);
+  }
+
+  // Check win
+  if (p.score >= state.target) {
+    setTimeout(() => showWin(player), 300);
+  }
+}
+
+function popScore(player) {
+  const el = document.getElementById(`${player}-score`);
+  el.classList.remove('pop');
+  void el.offsetWidth;
+  el.classList.add('pop');
+}
+
+function flashZone(player) {
+  const fl = document.getElementById('flash');
+  fl.className = 'flash-overlay ' + player + '-flash';
+  setTimeout(() => fl.className = 'flash-overlay', 350);
+}
+
+function showDelta(player, text) {
+  const el = document.getElementById(`${player}-delta`);
+  el.textContent = text;
+  el.classList.remove('show-delta');
+  void el.offsetWidth;
+  el.classList.add('show-delta');
+}
+
+function updateScoreDisplay() {
+  document.getElementById('p1-score').childNodes[0].textContent = state.p1.score;
+  document.getElementById('p2-score').childNodes[0].textContent = state.p2.score;
+}
+
+function updateSets() {
+  const make = (n) => '●'.repeat(n) || '○';
+  document.getElementById('set-p1').textContent = state.p1.sets;
+  document.getElementById('set-p2').textContent = state.p2.sets;
+}
+
+// ==================== TOUCH HANDLERS ====================
+function setupTouchHandlers() {
+  ['p1','p2'].forEach(p => {
+    const zone = document.getElementById(`${p}-zone`);
+    let startY = 0;
+    let moved = false;
+
+    zone.addEventListener('touchstart', (e) => {
+      if (e.target.classList.contains('minus-btn')) return;
+      startY = e.touches[0].clientY;
+      moved = false;
+      createRipple(e, zone);
+    }, {passive:true});
+
+    zone.addEventListener('touchmove', (e) => {
+      if (Math.abs(e.touches[0].clientY - startY) > 20) moved = true;
+    }, {passive:true});
+
+    zone.addEventListener('touchend', (e) => {
+      if (e.target.classList.contains('minus-btn')) return;
+      const dy = e.changedTouches[0].clientY - startY;
+      if (!moved || Math.abs(dy) < 30) {
+        addScore(p, 1);
+      } else if (dy > 30) {
+        addScore(p, -1);
+      }
+    });
+
+    zone.addEventListener('click', (e) => {
+      if (e.target.classList.contains('minus-btn')) return;
+    });
+
+    document.getElementById(`${p}-minus`).addEventListener('click', (e) => {
+      e.stopPropagation();
+      addScore(p, -1);
+    });
+  });
+}
+
+function createRipple(e, zone) {
+  const rect = zone.getBoundingClientRect();
+  const x = e.touches[0].clientX - rect.left;
+  const y = e.touches[0].clientY - rect.top;
+  const r = document.createElement('div');
+  r.className = 'ripple';
+  r.style.cssText = `left:${x}px;top:${y}px;width:80px;height:80px;margin:-40px;background:rgba(255,255,255,0.2);`;
+  zone.appendChild(r);
+  setTimeout(() => r.remove(), 700);
+}
+
+// ==================== TIMER ====================
+function toggleTimer() {
+  state.timerRunning = !state.timerRunning;
+  document.getElementById('timer-btn').textContent = state.timerRunning ? '⏸' : '▶';
+  if (state.timerRunning) {
+    state.timerInterval = setInterval(() => {
+      state.timerSec++;
+      updateTimerDisplay();
+    }, 1000);
+  } else {
+    clearInterval(state.timerInterval);
+  }
+}
+
+function updateTimerDisplay() {
+  const m = String(Math.floor(state.timerSec/60)).padStart(2,'0');
+  const s = String(state.timerSec%60).padStart(2,'0');
+  document.getElementById('timer-display').textContent = `${m}:${s}`;
+}
+
+// ==================== WIN ====================
+function showWin(player) {
+  soundWin();
+  state[player].sets++;
+  updateSets();
+
+  document.getElementById('win-emoji').textContent = '🏆';
+  document.getElementById('win-text').textContent = `${state[player].emoji} ${state[player].name.toUpperCase()} MENANG!`;
+  document.getElementById('win-subtext').textContent = `SKOR ${state.p1.score} – ${state.p2.score}`;
+  document.getElementById('win-overlay').className = 'show';
+
+  startConfetti(player);
+}
+
+function nextSet() {
+  document.getElementById('win-overlay').className = '';
+  stopConfetti();
+  state.p1.score = 0;
+  state.p2.score = 0;
+  state.history = [];
+  updateScoreDisplay();
+  showToast('Set berikutnya dimulai!');
+}
+
+// ==================== CONFETTI ====================
+let confettiAF = null;
+let particles = [];
+
+function startConfetti(player) {
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const colors = player === 'p1'
+    ? ['#00c6ff','#0070a0','#ffffff','#ffd700']
+    : ['#ff416c','#a00030','#ffffff','#ffd700'];
+
+  particles = Array.from({length:120}, () => ({
+    x: Math.random()*canvas.width,
+    y: -20,
+    r: 4 + Math.random()*8,
+    d: 1 + Math.random()*3,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    tilt: Math.random()*10-10,
+    tiltAngle: Math.random()*Math.PI*2,
+    tiltSpeed: 0.05 + Math.random()*0.1
+  }));
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p => {
+      p.y += p.d;
+      p.tiltAngle += p.tiltSpeed;
+      p.tilt = Math.sin(p.tiltAngle)*12;
+      ctx.beginPath();
+      ctx.fillStyle = p.color;
+      ctx.ellipse(p.x+p.tilt, p.y, p.r, p.r*0.4, p.tiltAngle, 0, Math.PI*2);
+      ctx.fill();
+    });
+    particles = particles.filter(p => p.y < canvas.height + 30);
+    if (particles.length > 0) confettiAF = requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  confettiAF = requestAnimationFrame(draw);
+}
+
+function stopConfetti() {
+  cancelAnimationFrame(confettiAF);
+  const canvas = document.getElementById('confetti-canvas');
+  canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
+  particles = [];
+}
+
+// ==================== UNDO ====================
+function undoScore() {
+  if (!state.history.length) { showToast('Tidak ada yang bisa di-undo'); return; }
+  const last = state.history.pop();
+  state.p1.score = last.p1 - (last.player==='p1' ? last.val : 0);
+  state.p2.score = last.p2 - (last.player==='p2' ? last.val : 0);
+  // Simpler: just subtract
+  state[last.player].score -= last.val;
+  state[last.player].score = Math.max(0, state[last.player].score);
+  soundUndo();
+  updateScoreDisplay();
+  showToast('↩ Skor dibatalkan');
+}
+
+// ==================== HISTORY PANEL ====================
+function toggleHistory() {
+  const panel = document.getElementById('history-panel');
+  const bg = document.getElementById('overlay-bg');
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    bg.classList.remove('show');
+  } else {
+    renderHistory();
+    panel.classList.add('open');
+    bg.classList.add('show');
+  }
+}
+
+function closeHistory() {
+  document.getElementById('history-panel').classList.remove('open');
+  document.getElementById('overlay-bg').classList.remove('show');
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!state.history.length) { list.innerHTML = '<div style="opacity:0.5;font-size:0.85rem">Belum ada riwayat</div>'; return; }
+  list.innerHTML = state.history.map((h,i) => {
+    const cls = h.val > 0 ? `tag-${h.player}` : 'tag-undo';
+    const label = h.val > 0 ? `${state[h.player].name} +${h.val}` : `${state[h.player].name} ${h.val}`;
+    return `<div class="history-row">
+      <span style="opacity:0.4;font-size:0.75rem">#${i+1}</span>
+      <span class="history-tag ${cls}">${label}</span>
+      <span style="opacity:0.5">${h.p1} – ${h.p2}</span>
+    </div>`;
+  }).reverse().join('');
+}
+
+// ==================== RESET ====================
+function resetGame() {
+  if (!confirm('Reset skor ke 0?')) return;
+  state.p1.score = 0;
+  state.p2.score = 0;
+  state.history = [];
+  state.timerSec = 0;
+  state.timerRunning = false;
+  clearInterval(state.timerInterval);
+  document.getElementById('timer-btn').textContent = '▶';
+  updateTimerDisplay();
+  updateScoreDisplay();
+  showToast('Skor direset!');
+}
+
+function goSetup() {
+  document.getElementById('win-overlay').className = '';
+  stopConfetti();
+  clearInterval(state.timerInterval);
+  state.timerRunning = false;
+  state.timerSec = 0;
+  state.p1.score = 0; state.p2.score = 0;
+  state.p1.sets = 0; state.p2.sets = 0;
+  state.history = [];
+  updateTimerDisplay();
+  showScreen('setup');
+}
+
+// ==================== UTILS ====================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ==================== SERVICE WORKER ====================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ==================== INIT ====================
+initEmojis();
+</script>
+</body>
+</html>

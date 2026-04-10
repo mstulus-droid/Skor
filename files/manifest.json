@@ -1,0 +1,17 @@
+{
+  "name": "ScoreBoard Pro",
+  "short_name": "ScoreBoard",
+  "description": "Aplikasi skor untuk 2 pemain dengan animasi dan suara",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0a0f",
+  "theme_color": "#0a0a0f",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230a0a0f'/><text x='50%' y='60%' font-size='120' text-anchor='middle' dominant-baseline='middle'>⚡</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    }
+  ]
+}
