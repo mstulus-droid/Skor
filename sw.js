@@ -1,4 +1,4 @@
-const CACHE_NAME = "rhadzor-score-v4";
+const CACHE_NAME = "rhadzor-score-v5";
 const ASSETS = [
   "./",
   "./index.html",

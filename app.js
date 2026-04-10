@@ -356,6 +356,9 @@ function showWinnerOverlay() {
   el.winnerOverlay.hidden = false;
   startConfetti();
   
+  // Re-attach listener to ensure button works
+  setTimeout(attachPlayAgainListener, 100);
+  
   // Play winner-specific sound (2 times)
   if (winner.name) {
     playWinnerSound(winner.name);
@@ -676,12 +679,17 @@ el.pickerOptions.addEventListener("click", (ev) => {
 });
 
 // Play Again button - now shows new game settings modal
-if (el.playAgainBtn) {
-  el.playAgainBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    showNewGameModal();
-  });
+function attachPlayAgainListener() {
+  const btn = document.getElementById("playAgainBtn");
+  if (btn) {
+    btn.onclick = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      showNewGameModal();
+      return false;
+    };
+  }
 }
 
 // New Game Modal event listeners
@@ -757,6 +765,7 @@ setupGesture(el.teamB, "B");
 
 loadState();
 render();
+attachPlayAgainListener();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
