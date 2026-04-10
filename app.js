@@ -19,8 +19,10 @@ const COUNTDOWN_SOUND_TRIGGER_MS = 6000; // 6 seconds before end
 
 // Sound files - all sounds starting with "gol-"
 const GOL_SOUNDS = [
+  "sound/gol-nice.mp3",
   "sound/gol-okeh.mp3",
   "sound/gol-score-mario-coin.mp3",
+  "sound/gol-uiiiiiiii.mp3",
   "sound/gol-wow.mp3",
   "sound/gol-yey.mp3"
 ];
