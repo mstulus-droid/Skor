@@ -356,8 +356,10 @@ function showWinnerOverlay() {
   el.winnerOverlay.hidden = false;
   startConfetti();
   
-  // Re-attach listener to ensure button works
-  setTimeout(attachPlayAgainListener, 100);
+  // Re-attach listener after overlay is shown
+  requestAnimationFrame(() => {
+    attachPlayAgainListener();
+  });
   
   // Play winner-specific sound (2 times)
   if (winner.name) {
@@ -372,6 +374,8 @@ function hideWinnerOverlay() {
 
 // New Game Modal Functions
 function showNewGameModal() {
+  console.log("showNewGameModal called");
+  
   // Initialize settings with current values
   newGameSettings.teamA = state.playerA;
   newGameSettings.teamB = state.playerB;
@@ -381,16 +385,34 @@ function showNewGameModal() {
   }
   
   renderNewGameModal();
-  el.newGameModal.hidden = false;
+  
+  const modal = document.getElementById("newGameModal");
+  if (modal) {
+    modal.hidden = false;
+    console.log("Modal shown");
+  } else {
+    console.error("newGameModal not found!");
+  }
 }
 
 function hideNewGameModal() {
-  el.newGameModal.hidden = true;
+  const modal = document.getElementById("newGameModal");
+  if (modal) {
+    modal.hidden = true;
+  }
 }
 
 function renderNewGameModal() {
+  const teamAOptions = document.getElementById("newGameTeamAOptions");
+  const teamBOptions = document.getElementById("newGameTeamBOptions");
+  
+  if (!teamAOptions || !teamBOptions) {
+    console.error("Team options elements not found!");
+    return;
+  }
+  
   // Render Team A options
-  el.newGameTeamAOptions.innerHTML = PLAYERS.map((name) => {
+  teamAOptions.innerHTML = PLAYERS.map((name) => {
     const logo = PLAYER_LOGOS[name];
     const isSelected = newGameSettings.teamA === name;
     return `
@@ -402,7 +424,7 @@ function renderNewGameModal() {
   }).join("");
   
   // Render Team B options
-  el.newGameTeamBOptions.innerHTML = PLAYERS.map((name) => {
+  teamBOptions.innerHTML = PLAYERS.map((name) => {
     const logo = PLAYER_LOGOS[name];
     const isSelected = newGameSettings.teamB === name;
     return `
@@ -414,10 +436,13 @@ function renderNewGameModal() {
   }).join("");
   
   // Render duration buttons
-  document.querySelectorAll('#newGameModal .duration-btn').forEach(btn => {
-    const minutes = parseInt(btn.dataset.minutes);
-    btn.classList.toggle('selected', newGameSettings.durationMinutes === minutes);
-  });
+  const modal = document.getElementById("newGameModal");
+  if (modal) {
+    modal.querySelectorAll('.duration-btn').forEach(btn => {
+      const minutes = parseInt(btn.dataset.minutes);
+      btn.classList.toggle('selected', newGameSettings.durationMinutes === minutes);
+    });
+  }
 }
 
 function selectNewGameTeam(teamSide, playerName) {
@@ -682,62 +707,66 @@ el.pickerOptions.addEventListener("click", (ev) => {
 function attachPlayAgainListener() {
   const btn = document.getElementById("playAgainBtn");
   if (btn) {
-    btn.onclick = function(e) {
+    // Remove any existing listeners by cloning
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    // Add fresh click listener
+    newBtn.addEventListener("click", function(e) {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
+      console.log("Main Lagi clicked!");
       showNewGameModal();
-      return false;
-    };
+    });
   }
 }
 
-// New Game Modal event listeners
-if (el.newGameBackdrop) {
-  el.newGameBackdrop.addEventListener("click", hideNewGameModal);
-}
-if (el.cancelNewGameBtn) {
-  el.cancelNewGameBtn.addEventListener("click", hideNewGameModal);
-}
-if (el.startNewGameBtn) {
-  el.startNewGameBtn.addEventListener("click", startNewGame);
-}
-
-// Team selection in new game modal
-if (el.newGameTeamAOptions) {
-  el.newGameTeamAOptions.addEventListener("click", (ev) => {
-    const option = ev.target.closest("[data-player]");
-    if (!option) return;
-    selectNewGameTeam('A', option.getAttribute("data-player"));
-  });
-}
-
-if (el.newGameTeamBOptions) {
-  el.newGameTeamBOptions.addEventListener("click", (ev) => {
-    const option = ev.target.closest("[data-player]");
-    if (!option) return;
-    selectNewGameTeam('B', option.getAttribute("data-player"));
-  });
-}
-
-// Duration selection in new game modal - use event delegation
-if (el.newGameModal) {
-  el.newGameModal.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.duration-btn');
-    if (btn) {
-      const minutes = parseInt(btn.dataset.minutes);
-      selectNewGameDuration(minutes);
-    }
-  });
-}
-
-// Debug 15 seconds button
-if (el.debug15sBtn) {
-  el.debug15sBtn.addEventListener('click', () => {
-    newGameSettings.durationMinutes = 0.25; // 15 seconds
-    startNewGame();
-  });
-}
+// New Game Modal event listeners - attach immediately since script is at end of body
+(function setupNewGameListeners() {
+  const backdrop = document.getElementById("newGameBackdrop");
+  const cancelBtn = document.getElementById("cancelNewGameBtn");
+  const startBtn = document.getElementById("startNewGameBtn");
+  const debugBtn = document.getElementById("debug15sBtn");
+  const modal = document.getElementById("newGameModal");
+  
+  if (backdrop) {
+    backdrop.addEventListener("click", hideNewGameModal);
+  }
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", hideNewGameModal);
+  }
+  if (startBtn) {
+    startBtn.addEventListener("click", startNewGame);
+  }
+  if (debugBtn) {
+    debugBtn.addEventListener('click', () => {
+      newGameSettings.durationMinutes = 0.25; // 15 seconds
+      startNewGame();
+    });
+  }
+  
+  // Event delegation for team selection and duration
+  if (modal) {
+    modal.addEventListener('click', (ev) => {
+      // Team selection
+      const teamOption = ev.target.closest('.newgame-team-option');
+      if (teamOption) {
+        const teamSide = teamOption.dataset.team;
+        const playerName = teamOption.dataset.player;
+        if (teamSide && playerName) {
+          selectNewGameTeam(teamSide, playerName);
+        }
+      }
+      
+      // Duration selection
+      const durationBtn = ev.target.closest('.duration-btn');
+      if (durationBtn) {
+        const minutes = parseInt(durationBtn.dataset.minutes);
+        selectNewGameDuration(minutes);
+      }
+    });
+  }
+})();
 
 // Close overlay on backdrop click (optional)
 el.winnerOverlay.addEventListener("click", (ev) => {
@@ -765,7 +794,7 @@ setupGesture(el.teamB, "B");
 
 loadState();
 render();
-attachPlayAgainListener();
+attachPlayAgainListener(); // Initial attachment
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

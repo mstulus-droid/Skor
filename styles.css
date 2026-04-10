@@ -404,16 +404,12 @@ body {
 .winner-buttons {
   display: grid;
   gap: 12px;
-  position: relative;
-  z-index: 102;
 }
 
 .winner-btn {
   min-height: 56px;
   font-size: 1.1rem;
   cursor: pointer;
-  position: relative;
-  z-index: 103;
 }
 
 /* New Game Modal Styles */
@@ -587,7 +583,7 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 99;
+  z-index: 101;
 }
 
 @keyframes pop {
