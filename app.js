@@ -6,10 +6,10 @@ const PLAYER_LOGOS = {
   Wulf: "Wulf.webp"
 };
 const PLAYER_THEMES = {
-  Almodo: { start: "#2fd89a", end: "#157f5e" },
-  Mechabara: { start: "#ff6a8c", end: "#9a2644" },
-  Sanchi: { start: "#5fa6ff", end: "#1f4c9a" },
-  Wulf: { start: "#d29bff", end: "#5d2d88" }
+  Almodo: { start: "#ff4444", end: "#8b0000" },
+  Mechabara: { start: "#4facfe", end: "#00f2fe" },
+  Sanchi: { start: "#ff69b4", end: "#c71585" },
+  Wulf: { start: "#ffffff", end: "#a0a0a0" }
 };
 
 // Default is now 5 minutes (300 seconds)
