@@ -341,20 +341,6 @@ body {
   animation: winnerSlideIn 600ms ease-out;
 }
 
-.winner-title {
-  font-family: "Exo 2", sans-serif;
-  font-size: clamp(2.5rem, 8vw, 4.5rem);
-  font-weight: 800;
-  margin: 0 0 20px 0;
-  text-shadow: 0 8px 30px rgb(0 0 0 / 40%);
-  background: linear-gradient(90deg, #ffd166, #ff6a8c, #5fa6ff, #ffd166);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s linear infinite;
-}
-
 .winner-logo-container {
   margin: 0 0 30px 0;
   animation: winnerPulse 2s ease-in-out infinite;
@@ -425,8 +411,94 @@ body {
   font-size: 1.1rem;
 }
 
+/* New Game Modal Styles */
+.newgame-panel {
+  max-width: 520px;
+  width: 100%;
+}
+
+.newgame-section {
+  margin-bottom: 20px;
+}
+
+.newgame-section-title {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.newgame-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.newgame-team-select {
+  display: grid;
+  gap: 8px;
+}
+
+.newgame-team-select label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.newgame-team-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.newgame-team-option {
+  border: 2px solid var(--border);
+  background: rgb(255 255 255 / 5%);
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.newgame-team-option:hover {
+  border-color: var(--accent);
+  background: rgb(255 255 255 / 10%);
+}
+
+.newgame-team-option.selected {
+  border-color: var(--accent);
+  background: rgb(255 209 102 / 20%);
+  box-shadow: 0 0 15px rgb(255 209 102 / 30%);
+}
+
+.newgame-team-option img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.newgame-team-option span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.newgame-vs {
+  font-family: "Exo 2", sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
 /* Duration Modal Styles */
-.duration-panel {
+.duration-panel,
+.newgame-panel {
   max-width: 420px;
 }
 
@@ -456,6 +528,12 @@ body {
   transform: translateY(-2px);
 }
 
+.duration-btn.selected {
+  border-color: var(--accent);
+  background: rgb(255 209 102 / 20%);
+  box-shadow: 0 0 15px rgb(255 209 102 / 30%);
+}
+
 .duration-btn:active {
   transform: translateY(0) scale(0.98);
 }
@@ -474,9 +552,15 @@ body {
   letter-spacing: 0.05em;
 }
 
+.newgame-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .duration-debug {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: center;
@@ -526,11 +610,6 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
-}
-
-@keyframes shimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 300% 50%; }
 }
 
 @media (max-width: 960px) {

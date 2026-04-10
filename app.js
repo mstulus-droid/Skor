@@ -38,6 +38,13 @@ const state = {
   timerTargetEpoch: 0
 };
 
+// New game settings
+let newGameSettings = {
+  teamA: PLAYERS[0],
+  teamB: PLAYERS[1],
+  durationMinutes: 5
+};
+
 const el = {
   appShell: document.querySelector(".app-shell"),
   scoreA: document.getElementById("scoreA"),
@@ -68,9 +75,13 @@ const el = {
   winnerScoreB: document.getElementById("winnerScoreB"),
   playAgainBtn: document.getElementById("playAgainBtn"),
   confettiCanvas: document.getElementById("confettiCanvas"),
-  // Duration modal elements
-  durationModal: document.getElementById("durationModal"),
-  durationBackdrop: document.getElementById("durationBackdrop"),
+  // New Game modal elements
+  newGameModal: document.getElementById("newGameModal"),
+  newGameBackdrop: document.getElementById("newGameBackdrop"),
+  newGameTeamAOptions: document.getElementById("newGameTeamAOptions"),
+  newGameTeamBOptions: document.getElementById("newGameTeamBOptions"),
+  startNewGameBtn: document.getElementById("startNewGameBtn"),
+  cancelNewGameBtn: document.getElementById("cancelNewGameBtn"),
   debug15sBtn: document.getElementById("debug15sBtn")
 };
 
@@ -157,7 +168,7 @@ function playCountdownSound() {
   countdownAudio.play().catch(() => {});
 }
 
-// Play winner-specific sound
+// Play winner-specific sound (2 times without delay)
 function playWinnerSound(winnerName) {
   if (!state.soundOn) return;
   
@@ -169,12 +180,17 @@ function playWinnerSound(winnerName) {
   }
   
   if (soundFile) {
-    const audio = new Audio(soundFile);
-    audio.volume = 0.8;
-    // Delay slightly after confetti starts
-    setTimeout(() => {
-      audio.play().catch(() => {});
-    }, 500);
+    // Play first time
+    const audio1 = new Audio(soundFile);
+    audio1.volume = 0.8;
+    audio1.play().catch(() => {});
+    
+    // Play second time immediately after first ends
+    audio1.onended = () => {
+      const audio2 = new Audio(soundFile);
+      audio2.volume = 0.8;
+      audio2.play().catch(() => {});
+    };
   }
 }
 
@@ -336,7 +352,7 @@ function showWinnerOverlay() {
   el.winnerOverlay.hidden = false;
   startConfetti();
   
-  // Play winner-specific sound
+  // Play winner-specific sound (2 times)
   if (winner.name) {
     playWinnerSound(winner.name);
   }
@@ -347,30 +363,99 @@ function hideWinnerOverlay() {
   stopConfetti();
 }
 
-// Duration Settings Modal Functions
-function showDurationModal() {
-  el.durationModal.hidden = false;
+// New Game Modal Functions
+function showNewGameModal() {
+  // Initialize settings with current values
+  newGameSettings.teamA = state.playerA;
+  newGameSettings.teamB = state.playerB;
+  newGameSettings.durationMinutes = Math.round(state.countdownMs / 60000);
+  if (![5, 10, 15].includes(newGameSettings.durationMinutes)) {
+    newGameSettings.durationMinutes = 5;
+  }
+  
+  renderNewGameModal();
+  el.newGameModal.hidden = false;
 }
 
-function hideDurationModal() {
-  el.durationModal.hidden = true;
+function hideNewGameModal() {
+  el.newGameModal.hidden = true;
 }
 
-function setMatchDuration(minutes) {
-  const ms = minutes * 60 * 1000;
-  state.countdownMs = ms;
-  state.timerTargetEpoch = 0;
-  hideDurationModal();
-  hideWinnerOverlay();
-  // Reset scores and start fresh
+function renderNewGameModal() {
+  // Render Team A options
+  el.newGameTeamAOptions.innerHTML = PLAYERS.map((name) => {
+    const logo = PLAYER_LOGOS[name];
+    const isSelected = newGameSettings.teamA === name;
+    return `
+      <button class="newgame-team-option ${isSelected ? 'selected' : ''}" data-team="A" data-player="${name}" type="button">
+        <img src="${logo}" alt="Logo ${name}">
+        <span>${name}</span>
+      </button>
+    `;
+  }).join("");
+  
+  // Render Team B options
+  el.newGameTeamBOptions.innerHTML = PLAYERS.map((name) => {
+    const logo = PLAYER_LOGOS[name];
+    const isSelected = newGameSettings.teamB === name;
+    return `
+      <button class="newgame-team-option ${isSelected ? 'selected' : ''}" data-team="B" data-player="${name}" type="button">
+        <img src="${logo}" alt="Logo ${name}">
+        <span>${name}</span>
+      </button>
+    `;
+  }).join("");
+  
+  // Render duration buttons
+  document.querySelectorAll('#newGameModal .duration-btn').forEach(btn => {
+    const minutes = parseInt(btn.dataset.minutes);
+    btn.classList.toggle('selected', newGameSettings.durationMinutes === minutes);
+  });
+}
+
+function selectNewGameTeam(teamSide, playerName) {
+  if (teamSide === 'A') {
+    newGameSettings.teamA = playerName;
+    // If same team selected for both, switch the other
+    if (newGameSettings.teamB === playerName) {
+      newGameSettings.teamB = PLAYERS.find(p => p !== playerName) || PLAYERS[1];
+    }
+  } else {
+    newGameSettings.teamB = playerName;
+    // If same team selected for both, switch the other
+    if (newGameSettings.teamA === playerName) {
+      newGameSettings.teamA = PLAYERS.find(p => p !== playerName) || PLAYERS[0];
+    }
+  }
+  renderNewGameModal();
+  beep(450, 0.05, "triangle", 0.08);
+}
+
+function selectNewGameDuration(minutes) {
+  newGameSettings.durationMinutes = minutes;
+  renderNewGameModal();
+  beep(520, 0.05, "triangle", 0.08);
+}
+
+function startNewGame() {
+  // Apply settings
+  state.playerA = newGameSettings.teamA;
+  state.playerB = newGameSettings.teamB;
+  state.countdownMs = newGameSettings.durationMinutes * 60 * 1000;
+  
+  // Reset game state
   state.scoreA = 0;
   state.scoreB = 0;
   state.actions = [];
   state.timerRunning = false;
+  state.timerTargetEpoch = 0;
   timerEndedNotified = false;
   countdownSoundPlayed = false;
   lastSecondCue = -1;
   clearInterval(timerInterval);
+  
+  hideNewGameModal();
+  hideWinnerOverlay();
   beep(520, 0.08, "square");
   render();
 }
@@ -490,7 +575,7 @@ function resetAll() {
   lastSecondCue = -1;
   clearInterval(timerInterval);
   hideWinnerOverlay();
-  hideDurationModal();
+  hideNewGameModal();
   beep(180, 0.14, "sawtooth", 0.14);
   render();
 }
@@ -586,25 +671,41 @@ el.pickerOptions.addEventListener("click", (ev) => {
   applyPlayerChoice(option.getAttribute("data-player"));
 });
 
-// Play Again button - now shows duration settings
+// Play Again button - now shows new game settings modal
 el.playAgainBtn.addEventListener("click", () => {
-  showDurationModal();
+  showNewGameModal();
 });
 
-// Duration modal event listeners
-el.durationBackdrop.addEventListener("click", hideDurationModal);
+// New Game Modal event listeners
+el.newGameBackdrop.addEventListener("click", hideNewGameModal);
+el.cancelNewGameBtn.addEventListener("click", hideNewGameModal);
+el.startNewGameBtn.addEventListener("click", startNewGame);
 
-// Duration selection buttons
-document.querySelectorAll('.duration-btn').forEach(btn => {
+// Team selection in new game modal
+el.newGameTeamAOptions.addEventListener("click", (ev) => {
+  const option = ev.target.closest("[data-player]");
+  if (!option) return;
+  selectNewGameTeam('A', option.getAttribute("data-player"));
+});
+
+el.newGameTeamBOptions.addEventListener("click", (ev) => {
+  const option = ev.target.closest("[data-player]");
+  if (!option) return;
+  selectNewGameTeam('B', option.getAttribute("data-player"));
+});
+
+// Duration selection in new game modal
+document.querySelectorAll('#newGameModal .duration-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const minutes = parseInt(btn.dataset.minutes);
-    setMatchDuration(minutes);
+    selectNewGameDuration(minutes);
   });
 });
 
 // Debug 15 seconds button
 el.debug15sBtn.addEventListener('click', () => {
-  setMatchDuration(0.25); // 15 seconds = 0.25 minutes
+  newGameSettings.durationMinutes = 0.25; // 15 seconds
+  startNewGame();
 });
 
 // Close overlay on backdrop click (optional)
@@ -617,7 +718,7 @@ el.winnerOverlay.addEventListener("click", (ev) => {
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && !el.teamPickerModal.hidden) closeTeamPicker();
   if (ev.key === "Escape" && !el.winnerOverlay.hidden) hideWinnerOverlay();
-  if (ev.key === "Escape" && !el.durationModal.hidden) hideDurationModal();
+  if (ev.key === "Escape" && !el.newGameModal.hidden) hideNewGameModal();
 });
 
 // Handle window resize for confetti

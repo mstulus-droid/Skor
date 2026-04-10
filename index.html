@@ -72,9 +72,7 @@
   <canvas id="confettiCanvas" hidden></canvas>
   <div id="winnerOverlay" class="winner-overlay" hidden>
     <div class="winner-content">
-      <h2 class="winner-title">🏆 PEMENANG 🏆</h2>
-      
-      <!-- Big Winner Logo -->
+      <!-- Big Winner Logo (no text title) -->
       <div class="winner-logo-container">
         <img id="winnerLogoBig" class="winner-logo-big" src="" alt="Winner Logo">
       </div>
@@ -97,25 +95,52 @@
     </div>
   </div>
 
-  <!-- Match Duration Settings Modal -->
-  <div id="durationModal" class="picker-modal" hidden>
-    <div id="durationBackdrop" class="picker-backdrop"></div>
-    <section class="picker-panel duration-panel" role="dialog" aria-modal="true" aria-label="Pilih durasi pertandingan">
-      <h3 class="picker-title">Pilih Durasi Pertandingan</h3>
-      <div class="duration-options">
-        <button class="duration-btn" data-minutes="5">
-          <span class="duration-time">5</span>
-          <span class="duration-label">Menit</span>
-        </button>
-        <button class="duration-btn" data-minutes="10">
-          <span class="duration-time">10</span>
-          <span class="duration-label">Menit</span>
-        </button>
-        <button class="duration-btn" data-minutes="15">
-          <span class="duration-time">15</span>
-          <span class="duration-label">Menit</span>
-        </button>
+  <!-- New Game Settings Modal (Team + Duration) -->
+  <div id="newGameModal" class="picker-modal" hidden>
+    <div id="newGameBackdrop" class="picker-backdrop"></div>
+    <section class="picker-panel newgame-panel" role="dialog" aria-modal="true" aria-label="Pengaturan pertandingan baru">
+      <h3 class="picker-title">🎮 Pertandingan Baru</h3>
+      
+      <!-- Team Selection -->
+      <div class="newgame-section">
+        <h4 class="newgame-section-title">Pilih Team</h4>
+        <div class="newgame-teams">
+          <div class="newgame-team-select">
+            <label>Team Kiri</label>
+            <div id="newGameTeamAOptions" class="newgame-team-options"></div>
+          </div>
+          <div class="newgame-vs">VS</div>
+          <div class="newgame-team-select">
+            <label>Team Kanan</label>
+            <div id="newGameTeamBOptions" class="newgame-team-options"></div>
+          </div>
+        </div>
       </div>
+      
+      <!-- Duration Selection -->
+      <div class="newgame-section">
+        <h4 class="newgame-section-title">Durasi Pertandingan</h4>
+        <div class="duration-options">
+          <button class="duration-btn" data-minutes="5">
+            <span class="duration-time">5</span>
+            <span class="duration-label">Menit</span>
+          </button>
+          <button class="duration-btn" data-minutes="10">
+            <span class="duration-time">10</span>
+            <span class="duration-label">Menit</span>
+          </button>
+          <button class="duration-btn" data-minutes="15">
+            <span class="duration-time">15</span>
+            <span class="duration-label">Menit</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="newgame-actions">
+        <button id="startNewGameBtn" class="btn primary winner-btn">Mulai Pertandingan</button>
+        <button id="cancelNewGameBtn" class="btn ghost">Batal</button>
+      </div>
+      
       <div class="duration-debug">
         <button id="debug15sBtn" class="btn ghost debug-btn">⚡ Debug: 15 detik</button>
       </div>
