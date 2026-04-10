@@ -14,6 +14,15 @@ const PLAYER_THEMES = {
 const DEFAULT_COUNTDOWN_MS = 90_000;
 const MAX_COUNTDOWN_MS = 5_940_000;
 
+// Sound files
+const GOL_SOUNDS = [
+  "sound/gol-score-mario-coin.mp3",
+  "sound/gol-yey.mp3"
+];
+const COUNTDOWN_SOUND = "sound/5s-countdown.mp3";
+const MBAPPE_SOUND = "sound/mbappe-mbappe-mbappe.mp3";
+const RONALDO_SOUND = "sound/ronalda-pushka.mp3";
+
 const state = {
   scoreA: 0,
   scoreB: 0,
@@ -49,7 +58,7 @@ const el = {
   closePickerBtn: document.getElementById("closePickerBtn"),
   // Winner overlay elements
   winnerOverlay: document.getElementById("winnerOverlay"),
-  winnerTeamName: document.getElementById("winnerTeamName"),
+  winnerLogoBig: document.getElementById("winnerLogoBig"),
   winnerLogoA: document.getElementById("winnerLogoA"),
   winnerLogoB: document.getElementById("winnerLogoB"),
   winnerScoreA: document.getElementById("winnerScoreA"),
@@ -64,6 +73,9 @@ let timerEndedNotified = false;
 let lastSecondCue = -1;
 let pickerTarget = null;
 const swipeStarts = new Map();
+
+// Audio elements for MP3 playback
+let countdownAudio = null;
 
 // Confetti variables
 let confettiAnimation = null;
@@ -119,46 +131,42 @@ function beep(freq = 660, duration = 0.08, type = "triangle", gainValue = 0.11) 
   osc.stop(t + duration);
 }
 
-function playTimerDoneTone() {
+// Play random gol sound for score
+function playRandomGolSound() {
   if (!state.soundOn) return;
-  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.type = "square";
-
-  const t = audioCtx.currentTime;
-  osc.frequency.setValueAtTime(1200, t);
-  osc.frequency.exponentialRampToValueAtTime(880, t + 0.16);
-  gain.gain.setValueAtTime(0.0001, t);
-  gain.gain.exponentialRampToValueAtTime(0.2, t + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
-
-  osc.start(t);
-  osc.stop(t + 0.24);
+  const randomSound = GOL_SOUNDS[Math.floor(Math.random() * GOL_SOUNDS.length)];
+  const audio = new Audio(randomSound);
+  audio.volume = 0.7;
+  audio.play().catch(() => {});
 }
 
-function playWinnerTone() {
+// Play countdown sound for timer end
+function playCountdownSound() {
   if (!state.soundOn) return;
-  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  countdownAudio = new Audio(COUNTDOWN_SOUND);
+  countdownAudio.volume = 0.8;
+  countdownAudio.play().catch(() => {});
+}
+
+// Play winner-specific sound
+function playWinnerSound(winnerName) {
+  if (!state.soundOn) return;
   
-  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-  const t = audioCtx.currentTime;
+  let soundFile = null;
+  if (winnerName === "Almodo") {
+    soundFile = MBAPPE_SOUND;
+  } else if (winnerName === "Mechabara") {
+    soundFile = RONALDO_SOUND;
+  }
   
-  notes.forEach((freq, i) => {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.type = "triangle";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.0001, t + i * 0.15);
-    gain.gain.exponentialRampToValueAtTime(0.15, t + i * 0.15 + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.15 + 0.35);
-    osc.start(t + i * 0.15);
-    osc.stop(t + i * 0.15 + 0.35);
-  });
+  if (soundFile) {
+    const audio = new Audio(soundFile);
+    audio.volume = 0.8;
+    // Delay slightly after confetti starts
+    setTimeout(() => {
+      audio.play().catch(() => {});
+    }, 500);
+  }
 }
 
 function runCountdownCues(liveMs) {
@@ -260,6 +268,11 @@ function stopConfetti() {
     cancelAnimationFrame(confettiAnimation);
     confettiAnimation = null;
   }
+  // Stop countdown sound if playing
+  if (countdownAudio) {
+    countdownAudio.pause();
+    countdownAudio = null;
+  }
 }
 
 // Winner Functions
@@ -269,31 +282,41 @@ function getWinner() {
   } else if (state.scoreB > state.scoreA) {
     return { team: 'B', name: state.playerB, score: state.scoreB, opponentScore: state.scoreA };
   } else {
-    return { team: 'DRAW', name: 'SERI!', score: state.scoreA, opponentScore: state.scoreB };
+    return { team: 'DRAW', name: null, score: state.scoreA, opponentScore: state.scoreB };
   }
 }
 
 function showWinnerOverlay() {
   const winner = getWinner();
   
-  el.winnerTeamName.textContent = winner.name;
+  // Set big logo for winner
+  if (winner.team === 'A') {
+    el.winnerLogoBig.src = PLAYER_LOGOS[state.playerA];
+    el.winnerLogoBig.alt = `Logo ${state.playerA}`;
+    el.winnerLogoBig.style.borderColor = PLAYER_THEMES[state.playerA].start;
+  } else if (winner.team === 'B') {
+    el.winnerLogoBig.src = PLAYER_LOGOS[state.playerB];
+    el.winnerLogoBig.alt = `Logo ${state.playerB}`;
+    el.winnerLogoBig.style.borderColor = PLAYER_THEMES[state.playerB].start;
+  } else {
+    // Draw - show both logos
+    el.winnerLogoBig.src = PLAYER_LOGOS[state.playerA];
+    el.winnerLogoBig.alt = "Draw";
+    el.winnerLogoBig.style.borderColor = '#ffd166';
+  }
+  
   el.winnerScoreA.textContent = state.scoreA;
   el.winnerScoreB.textContent = state.scoreB;
   el.winnerLogoA.src = PLAYER_LOGOS[state.playerA];
   el.winnerLogoB.src = PLAYER_LOGOS[state.playerB];
   
-  // Set color for winner name
-  if (winner.team === 'A') {
-    el.winnerTeamName.style.color = PLAYER_THEMES[state.playerA].start;
-  } else if (winner.team === 'B') {
-    el.winnerTeamName.style.color = PLAYER_THEMES[state.playerB].start;
-  } else {
-    el.winnerTeamName.style.color = '#ffd166';
-  }
-  
   el.winnerOverlay.hidden = false;
-  playWinnerTone();
   startConfetti();
+  
+  // Play winner-specific sound
+  if (winner.name) {
+    playWinnerSound(winner.name);
+  }
 }
 
 function hideWinnerOverlay() {
@@ -312,8 +335,8 @@ function onTimerEnded() {
   clearInterval(timerInterval);
   if (!timerEndedNotified) {
     timerEndedNotified = true;
-    playTimerDoneTone();
-    // Show winner overlay after short delay
+    playCountdownSound();
+    // Show winner overlay after countdown sound starts
     setTimeout(() => {
       showWinnerOverlay();
     }, 500);
@@ -387,8 +410,11 @@ function setScore(team, delta) {
   state.actions.unshift({ team, delta });
   state.actions = state.actions.slice(0, 60);
 
-  if (delta > 0) beep(720, 0.08, "triangle");
-  else beep(330, 0.07, "sine");
+  if (delta > 0) {
+    playRandomGolSound();
+  } else {
+    beep(330, 0.07, "sine");
+  }
 
   animateScore(team);
   render();
