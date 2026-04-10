@@ -68,6 +68,31 @@
     </section>
   </div>
 
+  <!-- Winner Overlay -->
+  <canvas id="confettiCanvas" hidden></canvas>
+  <div id="winnerOverlay" class="winner-overlay" hidden>
+    <div class="winner-content">
+      <h2 class="winner-title">🏆 PEMENANG 🏆</h2>
+      <p id="winnerTeamName" class="winner-team-name">Team A</p>
+      
+      <div class="winner-result">
+        <div class="winner-team-info">
+          <img id="winnerLogoA" class="winner-team-logo" src="" alt="Logo Team A">
+          <span id="winnerScoreA" class="winner-team-score">0</span>
+        </div>
+        <span class="winner-vs">VS</span>
+        <div class="winner-team-info">
+          <img id="winnerLogoB" class="winner-team-logo" src="" alt="Logo Team B">
+          <span id="winnerScoreB" class="winner-team-score">0</span>
+        </div>
+      </div>
+      
+      <div class="winner-buttons">
+        <button id="playAgainBtn" class="btn primary winner-btn">🎮 Main Lagi</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

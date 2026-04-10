@@ -46,7 +46,16 @@ const el = {
   teamPickerModal: document.getElementById("teamPickerModal"),
   pickerBackdrop: document.getElementById("pickerBackdrop"),
   pickerOptions: document.getElementById("pickerOptions"),
-  closePickerBtn: document.getElementById("closePickerBtn")
+  closePickerBtn: document.getElementById("closePickerBtn"),
+  // Winner overlay elements
+  winnerOverlay: document.getElementById("winnerOverlay"),
+  winnerTeamName: document.getElementById("winnerTeamName"),
+  winnerLogoA: document.getElementById("winnerLogoA"),
+  winnerLogoB: document.getElementById("winnerLogoB"),
+  winnerScoreA: document.getElementById("winnerScoreA"),
+  winnerScoreB: document.getElementById("winnerScoreB"),
+  playAgainBtn: document.getElementById("playAgainBtn"),
+  confettiCanvas: document.getElementById("confettiCanvas")
 };
 
 let audioCtx;
@@ -55,6 +64,10 @@ let timerEndedNotified = false;
 let lastSecondCue = -1;
 let pickerTarget = null;
 const swipeStarts = new Map();
+
+// Confetti variables
+let confettiAnimation = null;
+let confettiParticles = [];
 
 function saveState() {
   localStorage.setItem("rhadzor-score", JSON.stringify(state));
@@ -126,6 +139,28 @@ function playTimerDoneTone() {
   osc.stop(t + 0.24);
 }
 
+function playWinnerTone() {
+  if (!state.soundOn) return;
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+  const t = audioCtx.currentTime;
+  
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t + i * 0.15);
+    gain.gain.exponentialRampToValueAtTime(0.15, t + i * 0.15 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.15 + 0.35);
+    osc.start(t + i * 0.15);
+    osc.stop(t + i * 0.15 + 0.35);
+  });
+}
+
 function runCountdownCues(liveMs) {
   const secondsLeft = Math.ceil(liveMs / 1000);
   if (secondsLeft <= 10 && secondsLeft >= 1 && secondsLeft !== lastSecondCue) {
@@ -152,20 +187,147 @@ function getLiveCountdown() {
   return Math.max(0, state.timerTargetEpoch - Date.now());
 }
 
+// Confetti Functions
+function createConfettiParticle() {
+  const colors = ['#ffd166', '#ff6a8c', '#5fa6ff', '#2fd89a', '#d29bff', '#ffffff'];
+  return {
+    x: Math.random() * window.innerWidth,
+    y: -20,
+    size: Math.random() * 8 + 4,
+    color: colors[Math.floor(Math.random() * colors.length)],
+    speedY: Math.random() * 3 + 2,
+    speedX: (Math.random() - 0.5) * 4,
+    rotation: Math.random() * 360,
+    rotationSpeed: (Math.random() - 0.5) * 10,
+    opacity: 1
+  };
+}
+
+function initConfetti() {
+  confettiParticles = [];
+  for (let i = 0; i < 150; i++) {
+    confettiParticles.push(createConfettiParticle());
+  }
+}
+
+function drawConfetti() {
+  const ctx = el.confettiCanvas.getContext('2d');
+  ctx.clearRect(0, 0, el.confettiCanvas.width, el.confettiCanvas.height);
+  
+  confettiParticles.forEach(p => {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate((p.rotation * Math.PI) / 180);
+    ctx.globalAlpha = p.opacity;
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+    ctx.restore();
+  });
+}
+
+function updateConfetti() {
+  confettiParticles.forEach(p => {
+    p.y += p.speedY;
+    p.x += p.speedX;
+    p.rotation += p.rotationSpeed;
+    
+    if (p.y > window.innerHeight) {
+      p.y = -20;
+      p.x = Math.random() * window.innerWidth;
+    }
+  });
+}
+
+function animateConfetti() {
+  if (!el.confettiCanvas.hidden) {
+    drawConfetti();
+    updateConfetti();
+    confettiAnimation = requestAnimationFrame(animateConfetti);
+  }
+}
+
+function startConfetti() {
+  el.confettiCanvas.hidden = false;
+  el.confettiCanvas.width = window.innerWidth;
+  el.confettiCanvas.height = window.innerHeight;
+  initConfetti();
+  animateConfetti();
+}
+
+function stopConfetti() {
+  el.confettiCanvas.hidden = true;
+  if (confettiAnimation) {
+    cancelAnimationFrame(confettiAnimation);
+    confettiAnimation = null;
+  }
+}
+
+// Winner Functions
+function getWinner() {
+  if (state.scoreA > state.scoreB) {
+    return { team: 'A', name: state.playerA, score: state.scoreA, opponentScore: state.scoreB };
+  } else if (state.scoreB > state.scoreA) {
+    return { team: 'B', name: state.playerB, score: state.scoreB, opponentScore: state.scoreA };
+  } else {
+    return { team: 'DRAW', name: 'SERI!', score: state.scoreA, opponentScore: state.scoreB };
+  }
+}
+
+function showWinnerOverlay() {
+  const winner = getWinner();
+  
+  el.winnerTeamName.textContent = winner.name;
+  el.winnerScoreA.textContent = state.scoreA;
+  el.winnerScoreB.textContent = state.scoreB;
+  el.winnerLogoA.src = PLAYER_LOGOS[state.playerA];
+  el.winnerLogoB.src = PLAYER_LOGOS[state.playerB];
+  
+  // Set color for winner name
+  if (winner.team === 'A') {
+    el.winnerTeamName.style.color = PLAYER_THEMES[state.playerA].start;
+  } else if (winner.team === 'B') {
+    el.winnerTeamName.style.color = PLAYER_THEMES[state.playerB].start;
+  } else {
+    el.winnerTeamName.style.color = '#ffd166';
+  }
+  
+  el.winnerOverlay.hidden = false;
+  playWinnerTone();
+  startConfetti();
+}
+
+function hideWinnerOverlay() {
+  el.winnerOverlay.hidden = true;
+  stopConfetti();
+}
+
+function playAgain() {
+  hideWinnerOverlay();
+  resetAll();
+}
+
+function onTimerEnded() {
+  state.countdownMs = 0;
+  state.timerRunning = false;
+  clearInterval(timerInterval);
+  if (!timerEndedNotified) {
+    timerEndedNotified = true;
+    playTimerDoneTone();
+    // Show winner overlay after short delay
+    setTimeout(() => {
+      showWinnerOverlay();
+    }, 500);
+  }
+  lastSecondCue = -1;
+}
+
 function startTimerTicker() {
   clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     const live = getLiveCountdown();
     runCountdownCues(live);
     if (live <= 0 && state.timerRunning) {
-      state.countdownMs = 0;
-      state.timerRunning = false;
-      clearInterval(timerInterval);
-      if (!timerEndedNotified) {
-        timerEndedNotified = true;
-        playTimerDoneTone();
-      }
-      lastSecondCue = -1;
+      onTimerEnded();
     }
     render();
   }, 150);
@@ -206,14 +368,7 @@ function adjustTimer(deltaMs) {
     state.timerTargetEpoch += deltaMs;
     const live = getLiveCountdown();
     if (live <= 0) {
-      state.countdownMs = 0;
-      state.timerRunning = false;
-      clearInterval(timerInterval);
-      if (!timerEndedNotified) {
-        timerEndedNotified = true;
-        playTimerDoneTone();
-      }
-      lastSecondCue = -1;
+      onTimerEnded();
     }
   } else {
     state.countdownMs = Math.min(MAX_COUNTDOWN_MS, Math.max(0, state.countdownMs + deltaMs));
@@ -258,6 +413,7 @@ function resetAll() {
   timerEndedNotified = false;
   lastSecondCue = -1;
   clearInterval(timerInterval);
+  hideWinnerOverlay();
   beep(180, 0.14, "sawtooth", 0.14);
   render();
 }
@@ -329,6 +485,7 @@ function render() {
   saveState();
 }
 
+// Event Listeners
 el.undoBtn.addEventListener("click", undo);
 el.resetBtn.addEventListener("click", resetAll);
 el.timerBtn.addEventListener("click", toggleTimer);
@@ -351,8 +508,28 @@ el.pickerOptions.addEventListener("click", (ev) => {
   if (!option) return;
   applyPlayerChoice(option.getAttribute("data-player"));
 });
+
+// Play Again button
+el.playAgainBtn.addEventListener("click", playAgain);
+
+// Close overlay on backdrop click (optional)
+el.winnerOverlay.addEventListener("click", (ev) => {
+  if (ev.target === el.winnerOverlay) {
+    hideWinnerOverlay();
+  }
+});
+
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && !el.teamPickerModal.hidden) closeTeamPicker();
+  if (ev.key === "Escape" && !el.winnerOverlay.hidden) hideWinnerOverlay();
+});
+
+// Handle window resize for confetti
+window.addEventListener("resize", () => {
+  if (!el.confettiCanvas.hidden) {
+    el.confettiCanvas.width = window.innerWidth;
+    el.confettiCanvas.height = window.innerHeight;
+  }
 });
 
 setupGesture(el.teamA, "A");
