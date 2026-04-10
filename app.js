@@ -11,8 +11,11 @@ const PLAYER_THEMES = {
   Sanchi: { start: "#5fa6ff", end: "#1f4c9a" },
   Wulf: { start: "#d29bff", end: "#5d2d88" }
 };
-const DEFAULT_COUNTDOWN_MS = 90_000;
+
+// Default is now 5 minutes (300 seconds)
+const DEFAULT_COUNTDOWN_MS = 300_000;
 const MAX_COUNTDOWN_MS = 5_940_000;
+const COUNTDOWN_SOUND_TRIGGER_MS = 6000; // 6 seconds before end
 
 // Sound files
 const GOL_SOUNDS = [
@@ -64,12 +67,17 @@ const el = {
   winnerScoreA: document.getElementById("winnerScoreA"),
   winnerScoreB: document.getElementById("winnerScoreB"),
   playAgainBtn: document.getElementById("playAgainBtn"),
-  confettiCanvas: document.getElementById("confettiCanvas")
+  confettiCanvas: document.getElementById("confettiCanvas"),
+  // Duration modal elements
+  durationModal: document.getElementById("durationModal"),
+  durationBackdrop: document.getElementById("durationBackdrop"),
+  debug15sBtn: document.getElementById("debug15sBtn")
 };
 
 let audioCtx;
 let timerInterval;
 let timerEndedNotified = false;
+let countdownSoundPlayed = false;
 let lastSecondCue = -1;
 let pickerTarget = null;
 const swipeStarts = new Map();
@@ -140,9 +148,10 @@ function playRandomGolSound() {
   audio.play().catch(() => {});
 }
 
-// Play countdown sound for timer end
+// Play countdown sound (6 seconds before end)
 function playCountdownSound() {
-  if (!state.soundOn) return;
+  if (!state.soundOn || countdownSoundPlayed) return;
+  countdownSoundPlayed = true;
   countdownAudio = new Audio(COUNTDOWN_SOUND);
   countdownAudio.volume = 0.8;
   countdownAudio.play().catch(() => {});
@@ -170,6 +179,20 @@ function playWinnerSound(winnerName) {
 }
 
 function runCountdownCues(liveMs) {
+  // Play countdown sound when 6 seconds remaining
+  if (liveMs <= COUNTDOWN_SOUND_TRIGGER_MS && liveMs > 0 && !countdownSoundPlayed) {
+    playCountdownSound();
+  }
+  
+  // Reset countdown sound flag when timer is reset
+  if (liveMs > COUNTDOWN_SOUND_TRIGGER_MS) {
+    countdownSoundPlayed = false;
+    if (countdownAudio) {
+      countdownAudio.pause();
+      countdownAudio = null;
+    }
+  }
+  
   const secondsLeft = Math.ceil(liveMs / 1000);
   if (secondsLeft <= 10 && secondsLeft >= 1 && secondsLeft !== lastSecondCue) {
     lastSecondCue = secondsLeft;
@@ -324,9 +347,32 @@ function hideWinnerOverlay() {
   stopConfetti();
 }
 
-function playAgain() {
+// Duration Settings Modal Functions
+function showDurationModal() {
+  el.durationModal.hidden = false;
+}
+
+function hideDurationModal() {
+  el.durationModal.hidden = true;
+}
+
+function setMatchDuration(minutes) {
+  const ms = minutes * 60 * 1000;
+  state.countdownMs = ms;
+  state.timerTargetEpoch = 0;
+  hideDurationModal();
   hideWinnerOverlay();
-  resetAll();
+  // Reset scores and start fresh
+  state.scoreA = 0;
+  state.scoreB = 0;
+  state.actions = [];
+  state.timerRunning = false;
+  timerEndedNotified = false;
+  countdownSoundPlayed = false;
+  lastSecondCue = -1;
+  clearInterval(timerInterval);
+  beep(520, 0.08, "square");
+  render();
 }
 
 function onTimerEnded() {
@@ -335,8 +381,7 @@ function onTimerEnded() {
   clearInterval(timerInterval);
   if (!timerEndedNotified) {
     timerEndedNotified = true;
-    playCountdownSound();
-    // Show winner overlay after countdown sound starts
+    // Show winner overlay
     setTimeout(() => {
       showWinnerOverlay();
     }, 500);
@@ -368,6 +413,7 @@ function toggleTimer() {
     state.timerTargetEpoch = Date.now() + state.countdownMs;
     state.timerRunning = true;
     timerEndedNotified = false;
+    countdownSoundPlayed = false;
     lastSecondCue = -1;
     beep(520, 0.08, "square");
     startTimerTicker();
@@ -380,6 +426,7 @@ function resetTimer() {
   state.countdownMs = DEFAULT_COUNTDOWN_MS;
   state.timerTargetEpoch = 0;
   timerEndedNotified = false;
+  countdownSoundPlayed = false;
   lastSecondCue = -1;
   clearInterval(timerInterval);
   beep(310, 0.08, "triangle");
@@ -395,7 +442,9 @@ function adjustTimer(deltaMs) {
     }
   } else {
     state.countdownMs = Math.min(MAX_COUNTDOWN_MS, Math.max(0, state.countdownMs + deltaMs));
-    if (state.countdownMs > 10_000) lastSecondCue = -1;
+    if (state.countdownMs > COUNTDOWN_SOUND_TRIGGER_MS) {
+      countdownSoundPlayed = false;
+    }
   }
   beep(deltaMs > 0 ? 560 : 290, 0.05, "triangle", 0.09);
   render();
@@ -437,9 +486,11 @@ function resetAll() {
   state.countdownMs = DEFAULT_COUNTDOWN_MS;
   state.timerTargetEpoch = 0;
   timerEndedNotified = false;
+  countdownSoundPlayed = false;
   lastSecondCue = -1;
   clearInterval(timerInterval);
   hideWinnerOverlay();
+  hideDurationModal();
   beep(180, 0.14, "sawtooth", 0.14);
   render();
 }
@@ -535,8 +586,26 @@ el.pickerOptions.addEventListener("click", (ev) => {
   applyPlayerChoice(option.getAttribute("data-player"));
 });
 
-// Play Again button
-el.playAgainBtn.addEventListener("click", playAgain);
+// Play Again button - now shows duration settings
+el.playAgainBtn.addEventListener("click", () => {
+  showDurationModal();
+});
+
+// Duration modal event listeners
+el.durationBackdrop.addEventListener("click", hideDurationModal);
+
+// Duration selection buttons
+document.querySelectorAll('.duration-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const minutes = parseInt(btn.dataset.minutes);
+    setMatchDuration(minutes);
+  });
+});
+
+// Debug 15 seconds button
+el.debug15sBtn.addEventListener('click', () => {
+  setMatchDuration(0.25); // 15 seconds = 0.25 minutes
+});
 
 // Close overlay on backdrop click (optional)
 el.winnerOverlay.addEventListener("click", (ev) => {
@@ -548,6 +617,7 @@ el.winnerOverlay.addEventListener("click", (ev) => {
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "Escape" && !el.teamPickerModal.hidden) closeTeamPicker();
   if (ev.key === "Escape" && !el.winnerOverlay.hidden) hideWinnerOverlay();
+  if (ev.key === "Escape" && !el.durationModal.hidden) hideDurationModal();
 });
 
 // Handle window resize for confetti

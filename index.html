@@ -38,7 +38,7 @@
           <p id="countdownTitle" class="countdown-title">Countdown</p>
           <p id="vsMark" class="vs-mark" aria-hidden="true">VS</p>
         </div>
-        <button id="timerBtn" class="timer-display" aria-label="Mulai atau jeda countdown">01:30</button>
+        <button id="timerBtn" class="timer-display" aria-label="Mulai atau jeda countdown">05:00</button>
         <div id="timerControls" class="timer-controls">
           <button id="minus10Btn" class="btn ghost small">-10s</button>
           <button id="plus10Btn" class="btn ghost small">+10s</button>
@@ -95,6 +95,31 @@
         <button id="playAgainBtn" class="btn primary winner-btn">🎮 Main Lagi</button>
       </div>
     </div>
+  </div>
+
+  <!-- Match Duration Settings Modal -->
+  <div id="durationModal" class="picker-modal" hidden>
+    <div id="durationBackdrop" class="picker-backdrop"></div>
+    <section class="picker-panel duration-panel" role="dialog" aria-modal="true" aria-label="Pilih durasi pertandingan">
+      <h3 class="picker-title">Pilih Durasi Pertandingan</h3>
+      <div class="duration-options">
+        <button class="duration-btn" data-minutes="5">
+          <span class="duration-time">5</span>
+          <span class="duration-label">Menit</span>
+        </button>
+        <button class="duration-btn" data-minutes="10">
+          <span class="duration-time">10</span>
+          <span class="duration-label">Menit</span>
+        </button>
+        <button class="duration-btn" data-minutes="15">
+          <span class="duration-time">15</span>
+          <span class="duration-label">Menit</span>
+        </button>
+      </div>
+      <div class="duration-debug">
+        <button id="debug15sBtn" class="btn ghost debug-btn">⚡ Debug: 15 detik</button>
+      </div>
+    </section>
   </div>
 
   <script src="app.js"></script>

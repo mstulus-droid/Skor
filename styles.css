@@ -425,6 +425,74 @@ body {
   font-size: 1.1rem;
 }
 
+/* Duration Modal Styles */
+.duration-panel {
+  max-width: 420px;
+}
+
+.duration-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.duration-btn {
+  border: 2px solid var(--border);
+  background: linear-gradient(160deg, rgb(255 255 255 / 8%), rgb(255 255 255 / 3%));
+  color: var(--text);
+  border-radius: 16px;
+  padding: 20px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.duration-btn:hover {
+  border-color: var(--accent);
+  background: linear-gradient(160deg, rgb(255 209 102 / 15%), rgb(255 255 255 / 5%));
+  transform: translateY(-2px);
+}
+
+.duration-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.duration-time {
+  font-family: "Exo 2", sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.duration-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.duration-debug {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: center;
+}
+
+.debug-btn {
+  font-size: 0.75rem;
+  min-height: 32px;
+  padding: 4px 16px;
+  opacity: 0.7;
+}
+
+.debug-btn:hover {
+  opacity: 1;
+}
+
 /* Confetti Canvas */
 #confettiCanvas {
   position: fixed;
