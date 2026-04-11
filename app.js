@@ -65,7 +65,7 @@ const el = {
   timerResetBtn: document.getElementById("timerResetBtn"),
   minus10Btn: document.getElementById("minus10Btn"),
   plus10Btn: document.getElementById("plus10Btn"),
-  soundToggle: document.getElementById("soundToggle"),
+
   teamPickerModal: document.getElementById("teamPickerModal"),
   pickerBackdrop: document.getElementById("pickerBackdrop"),
   pickerOptions: document.getElementById("pickerOptions"),
@@ -99,6 +99,35 @@ const swipeStarts = new Map();
 
 // Audio elements for MP3 playback
 let countdownAudio = null;
+
+// Minute announcement tracking
+let announcedMinutes = new Set();
+
+// Text-to-speech for minute announcements
+function announceMinutesRemaining(minutes) {
+  if (!state.soundOn || minutes <= 0) return;
+  
+  // Play notification tone first
+  beep(880, 0.2, "sine", 0.2);
+  setTimeout(() => beep(1100, 0.25, "sine", 0.25), 250);
+  
+  // Use Web Speech API for announcement
+  if ('speechSynthesis' in window) {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(`${minutes} menit lagi`);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+    utterance.volume = 0.95;
+    
+    // Delay speech slightly after notification tone
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 600);
+  }
+}
 
 // Confetti variables
 let confettiAnimation = null;
@@ -210,6 +239,27 @@ function runCountdownCues(liveMs) {
     if (countdownAudio) {
       countdownAudio.pause();
       countdownAudio = null;
+    }
+  }
+  
+  // Minute announcements - only announce at exact minute marks
+  const minutesLeft = Math.floor(liveMs / 60000);
+  const secondsInMinute = Math.floor((liveMs % 60000) / 1000);
+  
+  // Announce at the start of each minute (when seconds are 59-0 range)
+  // and only if we haven't announced this minute yet
+  if (secondsInMinute <= 1 && minutesLeft > 0 && !announcedMinutes.has(minutesLeft)) {
+    announcedMinutes.add(minutesLeft);
+    announceMinutesRemaining(minutesLeft);
+  }
+  
+  // Reset announced minutes if timer goes back up
+  if (liveMs > 0) {
+    // Clear any announced minutes that are now higher than current
+    for (const min of announcedMinutes) {
+      if (min > minutesLeft) {
+        announcedMinutes.delete(min);
+      }
     }
   }
   
@@ -356,10 +406,10 @@ function showWinnerOverlay() {
   el.winnerOverlay.hidden = false;
   startConfetti();
   
-  // Re-attach listener after overlay is shown
-  requestAnimationFrame(() => {
+  // Re-attach listener after overlay is shown - use setTimeout to ensure DOM is ready
+  setTimeout(() => {
     attachPlayAgainListener();
-  });
+  }, 100);
   
   // Play winner-specific sound (2 times)
   if (winner.name) {
@@ -484,6 +534,7 @@ function startNewGame() {
   timerEndedNotified = false;
   countdownSoundPlayed = false;
   lastSecondCue = -1;
+  announcedMinutes.clear();
   clearInterval(timerInterval);
   
   hideNewGameModal();
@@ -545,6 +596,7 @@ function resetTimer() {
   timerEndedNotified = false;
   countdownSoundPlayed = false;
   lastSecondCue = -1;
+  announcedMinutes.clear();
   clearInterval(timerInterval);
   beep(310, 0.08, "triangle");
   render();
@@ -605,6 +657,7 @@ function resetAll() {
   timerEndedNotified = false;
   countdownSoundPlayed = false;
   lastSecondCue = -1;
+  announcedMinutes.clear();
   clearInterval(timerInterval);
   hideWinnerOverlay();
   hideNewGameModal();
@@ -613,13 +666,27 @@ function resetAll() {
 }
 
 function setupGesture(teamEl, team) {
+  // Click on team logo also adds score
+  const logo = teamEl.querySelector('.team-logo');
+  if (logo) {
+    logo.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault();
+      setScore(team, +1);
+    });
+  }
+  
   teamEl.addEventListener("pointerdown", (ev) => {
-    if (ev.target.closest("button,img")) return;
+    // Only respond to clicks on the team panel itself, not buttons
+    if (ev.target.closest("button")) return;
     swipeStarts.set(ev.pointerId, { y: ev.clientY });
   });
 
   teamEl.addEventListener("pointerup", (ev) => {
-    if (ev.target.closest("button,img")) return;
+    // Skip if clicked on button
+    if (ev.target.closest("button")) return;
+    // If clicked on logo, it's handled separately above
+    if (ev.target.closest(".team-logo")) return;
+    
     const start = swipeStarts.get(ev.pointerId);
     swipeStarts.delete(ev.pointerId);
     if (!start) {
@@ -671,7 +738,7 @@ function render() {
   el.teamA.style.setProperty("--team-bg-2", themeA.end);
   el.teamB.style.setProperty("--team-bg-1", themeB.start);
   el.teamB.style.setProperty("--team-bg-2", themeB.end);
-  el.soundToggle.textContent = state.soundOn ? "Sound ON" : "Sound OFF";
+
   el.timerBtn.textContent = formatMs(liveCountdown);
   el.timerBtn.classList.toggle("timer-warning", liveCountdown <= 15_000 && liveCountdown > 0);
   el.appShell.classList.toggle("timer-running", state.timerRunning);
@@ -683,15 +750,11 @@ function render() {
 el.undoBtn.addEventListener("click", undo);
 el.resetBtn.addEventListener("click", resetAll);
 el.timerBtn.addEventListener("click", toggleTimer);
-el.timerResetBtn.addEventListener("click", resetTimer);
+el.timerResetBtn.addEventListener("click", () => adjustTimer(60_000));
 el.minus10Btn.addEventListener("click", () => adjustTimer(-10_000));
 el.plus10Btn.addEventListener("click", () => adjustTimer(10_000));
 
-el.soundToggle.addEventListener("click", () => {
-  state.soundOn = !state.soundOn;
-  beep(500, 0.06, "triangle");
-  render();
-});
+
 
 el.pickTeamA.addEventListener("click", () => openTeamPicker("A"));
 el.pickTeamB.addEventListener("click", () => openTeamPicker("B"));
@@ -715,8 +778,19 @@ function attachPlayAgainListener() {
     newBtn.addEventListener("click", function(e) {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       console.log("Main Lagi clicked!");
       showNewGameModal();
+      return false;
+    });
+    
+    // Also add touchend for mobile
+    newBtn.addEventListener("touchend", function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log("Main Lagi touched!");
+      showNewGameModal();
+      return false;
     });
   }
 }

@@ -52,8 +52,20 @@ body {
 
 .topbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr minmax(190px, 26vw) 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.topbar-center {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.team-change-btn {
+  min-height: 42px;
+  font-size: 0.9rem;
 }
 
 .btn {
@@ -118,7 +130,10 @@ body {
 .team-head {
   display: grid;
   gap: 6px;
+  position: relative;
 }
+
+
 
 .logo-pick {
   border: 0;
@@ -127,12 +142,80 @@ body {
   cursor: pointer;
 }
 
+/* Mobile landscape optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+  .app-shell {
+    padding: 6px;
+    gap: 4px;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  
+  .board {
+    gap: 6px;
+    min-height: 0;
+  }
+  
+  .team {
+    padding: 8px;
+  }
+  
+  .team-logo {
+    height: clamp(100px, 22vh, 200px);
+  }
+  
+  .score {
+    font-size: clamp(4rem, 20vh, 10rem);
+  }
+  
+  .countdown-panel {
+    padding: 8px;
+  }
+  
+  .timer-display {
+    min-height: 60px;
+    font-size: clamp(1.6rem, 5vw, 2.5rem);
+  }
+  
+  .app-shell.timer-running .timer-display {
+    min-height: 150px;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    transform: translateY(25%);
+  }
+  
+  .app-shell.timer-running .vs-mark {
+    transform: translateY(15%);
+  }
+  
+  .btn {
+    min-height: 36px;
+    font-size: 0.8rem;
+  }
+  
+  .team-change-btn {
+    min-height: 36px;
+    font-size: 0.75rem;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr minmax(140px, 26vw) 1fr;
+    gap: 8px;
+  }
+
+  .topbar-center {
+    gap: 6px;
+  }
+}
+
 .team-logo {
   width: 100%;
   height: clamp(140px, 30vh, 270px);
   object-fit: contain;
   object-position: center;
   filter: drop-shadow(0 8px 14px rgb(0 0 0 / 25%));
+  cursor: pointer;
+  pointer-events: none;
 }
 
 .score {
@@ -180,8 +263,8 @@ body {
   margin: 0;
   font-family: "Exo 2", sans-serif;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  font-size: clamp(1.3rem, 3.5vw, 2.2rem);
+  letter-spacing: 0.1em;
+  font-size: clamp(3rem, 8vw, 5rem);
   color: #fff;
   text-shadow: 0 8px 20px rgb(0 0 0 / 30%);
 }
@@ -220,6 +303,9 @@ body {
 
 .app-shell.timer-running .vs-mark {
   display: block;
+  margin-top: auto;
+  margin-bottom: auto;
+  transform: translateY(25%);
 }
 
 .app-shell.timer-running .timer-display {
@@ -228,14 +314,12 @@ body {
   font-size: clamp(2.5rem, 8vw, 5rem);
   letter-spacing: 0.02em;
   padding: 0 8px;
+  margin-top: auto;
+  margin-bottom: auto;
+  transform: translateY(30%);
 }
 
-.rotate-hint {
-  margin: 0;
-  text-align: center;
-  color: var(--muted);
-  font-size: 0.82rem;
-}
+
 
 .score-pop {
   animation: pop 220ms ease-out;
@@ -620,9 +704,11 @@ body {
   }
 
   .board {
-    grid-template-columns: 1fr 35vw 1fr;
+    grid-template-columns: 1fr minmax(140px, 26vw) 1fr;
     gap: 8px;
   }
+
+
 
   .team,
   .countdown-panel {
@@ -664,6 +750,20 @@ body {
   .board {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 8px;
+  }
+
+  .topbar-center {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   .countdown-panel {
