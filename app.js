@@ -1,15 +1,17 @@
-const PLAYERS = ["Almodo", "Mechabara", "Sanchi", "Wulf"];
+const PLAYERS = ["Almodo", "Mechabara", "Sanchi", "Wulf", "Owlnick"];
 const PLAYER_LOGOS = {
   Almodo: "Almodo2.webp",
   Mechabara: "Mechabara.webp",
   Sanchi: "sanchi.webp",
-  Wulf: "Wulf.webp"
+  Wulf: "Wulf.webp",
+  Owlnick: "Owlnick.webp"
 };
 const PLAYER_THEMES = {
   Almodo: { start: "#ff4444", end: "#8b0000" },
   Mechabara: { start: "#4facfe", end: "#00f2fe" },
   Sanchi: { start: "#ff69b4", end: "#c71585" },
-  Wulf: { start: "#ffffff", end: "#a0a0a0" }
+  Wulf: { start: "#ffffff", end: "#a0a0a0" },
+  Owlnick: { start: "#3c5bb8", end: "#0f1b3a" }
 };
 
 // Default is now 5 minutes (300 seconds)
@@ -647,6 +649,34 @@ function undo() {
   render();
 }
 
+// "Reset Match" duduk sebesar tombol lain tepat di atas papan yang terus
+// ditepuk selama pertandingan. Satu sentuhan nyasar dulu langsung menghapus
+// skor dan waktu tanpa bisa dibatalkan, jadi sekarang ia minta ditekan dua
+// kali: tekanan pertama cuma mengokang dan otomatis batal setelah 3 detik.
+let resetArmed = false;
+let resetArmTimeout = null;
+
+function disarmReset() {
+  resetArmed = false;
+  clearTimeout(resetArmTimeout);
+  resetArmTimeout = null;
+  el.resetBtn.textContent = "Reset Match";
+  el.resetBtn.classList.remove("btn-armed");
+}
+
+function requestReset() {
+  if (resetArmed) {
+    disarmReset();
+    resetAll();
+    return;
+  }
+  resetArmed = true;
+  el.resetBtn.textContent = "Yakin?";
+  el.resetBtn.classList.add("btn-armed");
+  beep(420, 0.06, "triangle", 0.09);
+  resetArmTimeout = setTimeout(disarmReset, 3000);
+}
+
 function resetAll() {
   state.scoreA = 0;
   state.scoreB = 0;
@@ -748,7 +778,7 @@ function render() {
 
 // Event Listeners
 el.undoBtn.addEventListener("click", undo);
-el.resetBtn.addEventListener("click", resetAll);
+el.resetBtn.addEventListener("click", requestReset);
 el.timerBtn.addEventListener("click", toggleTimer);
 el.timerResetBtn.addEventListener("click", () => adjustTimer(60_000));
 el.minus10Btn.addEventListener("click", () => adjustTimer(-10_000));
@@ -862,6 +892,10 @@ window.addEventListener("resize", () => {
     el.confettiCanvas.height = window.innerHeight;
   }
 });
+
+document.addEventListener("pointerdown", (ev) => {
+  if (resetArmed && !ev.target.closest("#resetBtn")) disarmReset();
+}, true);
 
 setupGesture(el.teamA, "A");
 setupGesture(el.teamB, "B");

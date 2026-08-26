@@ -142,72 +142,6 @@ body {
   cursor: pointer;
 }
 
-/* Mobile landscape optimization */
-@media (max-height: 500px) and (orientation: landscape) {
-  .app-shell {
-    padding: 6px;
-    gap: 4px;
-    min-height: 100dvh;
-    max-height: 100dvh;
-    overflow: hidden;
-  }
-  
-  .board {
-    gap: 6px;
-    min-height: 0;
-  }
-  
-  .team {
-    padding: 8px;
-  }
-  
-  .team-logo {
-    height: clamp(100px, 22vh, 200px);
-  }
-  
-  .score {
-    font-size: clamp(4rem, 20vh, 10rem);
-  }
-  
-  .countdown-panel {
-    padding: 8px;
-  }
-  
-  .timer-display {
-    min-height: 60px;
-    font-size: clamp(1.6rem, 5vw, 2.5rem);
-  }
-  
-  .app-shell.timer-running .timer-display {
-    min-height: 150px;
-    font-size: clamp(2rem, 6vw, 3.5rem);
-    transform: translateY(25%);
-  }
-  
-  .app-shell.timer-running .vs-mark {
-    transform: translateY(15%);
-  }
-  
-  .btn {
-    min-height: 36px;
-    font-size: 0.8rem;
-  }
-  
-  .team-change-btn {
-    min-height: 36px;
-    font-size: 0.75rem;
-  }
-
-  .topbar {
-    grid-template-columns: 1fr minmax(140px, 26vw) 1fr;
-    gap: 8px;
-  }
-
-  .topbar-center {
-    gap: 6px;
-  }
-}
-
 .team-logo {
   width: 100%;
   height: clamp(140px, 30vh, 270px);
@@ -261,6 +195,7 @@ body {
 .vs-mark {
   display: none;
   margin: 0;
+  line-height: 1;
   font-family: "Exo 2", sans-serif;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -280,9 +215,10 @@ body {
   font-size: clamp(2.1rem, 6.6vw, 3.8rem);
   font-weight: 800;
   letter-spacing: 0.03em;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  text-overflow: clip;
+  overflow: visible;
+  padding: 0 4px;
 }
 
 .timer-controls {
@@ -296,27 +232,31 @@ body {
   display: none;
 }
 
+/* Saat berjalan, panel tengah tinggal berisi VS dan jam. Dulu keduanya
+   didorong ke tengah pakai translateY(25%/30%); di lanskap ponsel dorongan itu
+   melempar kotak jamnya 18px ke luar layar dan panel yang overflow:hidden
+   memotong angkanya. Sekarang dua baris grid yang menengahkannya, tanpa
+   transform, jadi tidak ada yang bisa keluar dari panel. */
 .app-shell.timer-running .countdown-panel {
-  align-content: stretch;
-  padding-block: 18px;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: 14px;
+  padding-block: 14px;
 }
 
 .app-shell.timer-running .vs-mark {
   display: block;
-  margin-top: auto;
-  margin-bottom: auto;
-  transform: translateY(25%);
+  align-self: center;
 }
 
 .app-shell.timer-running .timer-display {
   align-self: center;
-  min-height: 240px;
+  min-height: 0;
   font-size: clamp(2.5rem, 8vw, 5rem);
   letter-spacing: 0.02em;
-  padding: 0 8px;
-  margin-top: auto;
-  margin-bottom: auto;
-  transform: translateY(30%);
+  /* padding dalam em: kotaknya memeluk angka apa pun ukuran hurufnya, tidak
+     lagi diregangkan setinggi panel sehingga angkanya berenang di bidang hitam */
+  padding: 0.3em 8px;
 }
 
 
@@ -340,10 +280,14 @@ body {
 .picker-modal {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 120;
   display: grid;
   place-items: center;
   padding: 12px;
+  /* Di lanskap ponsel panelnya lebih tinggi dari layar; tanpa ini tombol
+     paling bawah ("Tutup", "Mulai Pertandingan") tak bisa dijangkau sama sekali. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .picker-backdrop {
@@ -363,6 +307,8 @@ body {
   padding: 12px;
   display: grid;
   gap: 12px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
 }
 
 .picker-title {
@@ -407,7 +353,10 @@ body {
   z-index: 100;
   display: grid;
   place-items: center;
+  align-content: center;
   padding: 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background:
     radial-gradient(circle at 30% 20%, rgb(255 209 102 / 20%), transparent 50%),
     radial-gradient(circle at 70% 80%, rgb(94 134 196 / 20%), transparent 50%),
@@ -652,10 +601,17 @@ body {
 }
 
 .debug-btn {
+  position: relative;
   font-size: 0.75rem;
-  min-height: 32px;
+  min-height: 30px;
   padding: 4px 16px;
   opacity: 0.7;
+}
+
+.debug-btn::after {
+  content: "";
+  position: absolute;
+  inset: -7px -4px;
 }
 
 .debug-btn:hover {
@@ -783,4 +739,469 @@ body {
   .winner-vs {
     order: -1;
   }
+}
+
+/* ============================================================
+   LANSKAP PONSEL — mode utama aplikasi ini.
+   Blok ini sengaja ditaruh PALING BAWAH. Versi sebelumnya ditulis di tengah
+   berkas, sebelum aturan dasar .team-logo/.score/.timer-display, sehingga
+   kalah urutan sumber pada spesifisitas yang sama: hampir seluruh isinya tidak
+   pernah berlaku dan lanskap sebenarnya masih memakai ukuran potret.
+   ============================================================ */
+@media (orientation: landscape) and (max-height: 560px) {
+  /* viewport-fit=cover sudah dipasang di <meta>, tapi inset-nya tak pernah
+     dipakai. Di iPhone yang dimiringkan, poni memakan salah satu sisi dan
+     panel team kiri/kanan masuk ke baliknya. */
+  .app-shell {
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 5px;
+    padding: max(5px, env(safe-area-inset-top)) max(7px, env(safe-area-inset-right))
+             max(5px, env(safe-area-inset-bottom)) max(7px, env(safe-area-inset-left));
+  }
+
+  /* Dua tombol "Ganti Team" sebelumnya selebar 1fr — 300px sisi kiri dan kanan
+     untuk label sekecil itu — sementara tinggi layar justru yang langka.
+     Sekarang semua tombol memeluk isinya dan berkumpul jadi satu baris tipis. */
+  .topbar {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .topbar-center {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    justify-self: center;
+    gap: 6px;
+  }
+
+  .topbar .btn {
+    min-height: 40px;
+    font-size: 0.78rem;
+    padding: 0 14px;
+    white-space: nowrap;
+    border-radius: 10px;
+  }
+
+  .team-change-btn {
+    min-height: 40px;
+    font-size: 0.78rem;
+  }
+
+  .board {
+    grid-template-columns: 1fr minmax(158px, 27vw) 1fr;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  .team,
+  .countdown-panel {
+    border-radius: 14px;
+  }
+
+  .team {
+    padding: 6px 8px;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .team-head {
+    align-content: center;
+    min-height: 0;
+  }
+
+  /* Logo dan angka diikat ke tinggi layar, bukan ke clamp potret yang dasarnya
+     140px + 153px dan menyisakan panel setengah kosong. */
+  .team-logo {
+    height: 100%;
+    max-height: 34vh;
+    min-height: 70px;
+  }
+
+  .score {
+    font-size: min(44vh, 22vw);
+    line-height: 0.82;
+  }
+
+  .countdown-panel {
+    padding: 8px;
+    gap: 7px;
+    /* Jamnya diukur dari lebar panel ini, bukan dari lebar layar: kolom tengah
+       elastis (24vw dengan lantai 158px), jadi patokan vw meleset di ujung
+       sempit dan angkanya melebar melebihi panel. */
+    container-type: inline-size;
+  }
+
+  .countdown-title {
+    /* 0.7rem = 11.2px, tepat di atas ambang teks mikro. Ruang yang hilang
+       diambil dari tracking, bukan dari ukuran hurufnya. */
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+  }
+
+  .countdown-top {
+    min-height: 0;
+  }
+
+  /* Angka jam dibatasi lebar kolomnya (7vw x 5 karakter), bukan tingginya,
+     karena kolom tengahlah yang paling dulu kehabisan ruang. */
+  .timer-display {
+    min-height: 62px;
+    /* "05:00" selebar ~2,8x tinggi hurufnya; 31cqw menyisakan napas di kedua
+       tepi. min-width:0 menjaga tombol ini tak pernah memaksa panelnya melebar
+       (grid item bawaannya min-width:auto, dan panel meng-hidden luapannya). */
+    font-size: min(31cqw, 15vh);
+    min-width: 0;
+    border-radius: 12px;
+  }
+
+  .timer-controls {
+    gap: 6px;
+  }
+
+  .timer-controls .btn.small {
+    min-height: 40px;
+    font-size: 0.74rem;
+    padding: 0 2px;
+  }
+
+  .app-shell.timer-running .countdown-panel {
+    grid-template-rows: auto auto;
+    align-content: center;
+    gap: 10px;
+    padding-block: 8px;
+  }
+
+  .app-shell.timer-running .vs-mark {
+    font-size: min(9vw, 17vh);
+  }
+
+  .app-shell.timer-running .timer-display {
+    align-self: center;
+    font-size: min(31cqw, 30vh);
+    min-height: 0;
+    padding: 0.28em 8px;
+  }
+
+  /* ---- Modal di lanskap ---- */
+  .picker-modal {
+    padding: 8px;
+  }
+
+  .picker-panel {
+    width: min(720px, 100%);
+    max-height: calc(100dvh - 16px);
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .picker-title {
+    font-size: 1rem;
+  }
+
+  /* Lima team dalam dua kolom membuat panel lebih tinggi dari layar lanskap dan
+     tombol Tutup terdorong ke luar. Satu baris berisi lima kartu tegak muat. */
+  .picker-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .picker-option {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    min-height: 0;
+    gap: 4px;
+    padding: 8px 4px;
+    font-size: 0.78rem;
+  }
+
+  .picker-option img {
+    width: 46px;
+    height: 46px;
+  }
+
+  /* ---- Layar juara di lanskap ----
+     Sebelumnya logo 280px + kartu skor + tombol ditumpuk vertikal: tombol
+     "Main Lagi" jatuh ratusan piksel di luar layar dan pertandingan baru
+     tidak bisa dimulai sama sekali tanpa memuat ulang halaman. */
+  .winner-overlay {
+    padding: 8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+  }
+
+  .winner-content {
+    display: grid;
+    grid-template-columns: auto minmax(0, 330px);
+    grid-template-rows: auto auto;
+    justify-content: center;
+    align-items: center;
+    column-gap: 22px;
+    row-gap: 12px;
+    max-width: none;
+  }
+
+  .winner-logo-container {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    margin: 0;
+  }
+
+  .winner-result {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .winner-buttons {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .winner-logo-big {
+    width: min(190px, 46vh);
+    height: min(190px, 46vh);
+    padding: 10px;
+    border-width: 3px;
+    border-radius: 18px;
+  }
+
+  .winner-result {
+    margin: 0;
+    padding: 12px 18px;
+    gap: 12px;
+    max-width: none;
+    border-radius: 14px;
+  }
+
+  .winner-team-logo {
+    width: 46px;
+    height: 46px;
+  }
+
+  .winner-team-score {
+    font-size: clamp(2rem, 8vh, 3rem);
+  }
+
+  .winner-btn {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  /* ---- Modal pertandingan baru di lanskap ---- */
+  .newgame-panel {
+    max-width: 760px;
+  }
+
+  .newgame-section {
+    margin-bottom: 10px;
+  }
+
+  .newgame-section-title {
+    margin-bottom: 6px;
+    font-size: 0.72rem;
+  }
+
+  .newgame-team-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .newgame-team-option {
+    padding: 6px 2px;
+    gap: 3px;
+    border-radius: 10px;
+  }
+
+  .newgame-team-option img {
+    width: 30px;
+    height: 30px;
+  }
+
+  .newgame-team-option span {
+    font-size: 0.62rem;
+    line-height: 1.1;
+  }
+
+  .newgame-teams {
+    gap: 8px;
+  }
+
+  .newgame-team-select label {
+    font-size: 0.7rem;
+  }
+
+  .newgame-vs {
+    font-size: 1rem;
+  }
+
+  .duration-options {
+    gap: 8px;
+  }
+
+  .duration-btn {
+    padding: 6px;
+    border-radius: 12px;
+  }
+
+  .duration-time {
+    font-size: 1.4rem;
+  }
+
+  .duration-label {
+    font-size: 0.66rem;
+  }
+
+  .newgame-actions {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .duration-debug {
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+
+  .debug-btn {
+    min-height: 30px;
+    font-size: 0.7rem;
+  }
+}
+
+/* ============================================================
+   POTRET PONSEL
+   Blok tambahan, ditaruh di akhir supaya menang urutan sumber atas aturan
+   dasar yang ditulis belakangan di berkas ini.
+   ============================================================ */
+@media (orientation: portrait) and (max-width: 620px) {
+  /* Papan skor yang skor lawannya harus digulir dulu bukan papan skor.
+     Sebelumnya team B jatuh di bawah lipatan dan hanya satu angka terlihat. */
+  .app-shell {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+             max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+
+  .board {
+    grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  /* Logo di kiri, angka di kanan: satu baris per team memakai tinggi separuh
+     dari susunan bertumpuk, jadi dua team muat sekaligus. */
+  .team {
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    padding: 8px 10px;
+  }
+
+  .team-head {
+    align-self: center;
+  }
+
+  .team-logo {
+    height: min(100%, 20vh);
+  }
+
+  .score {
+    align-self: center;
+    font-size: min(17vh, 34vw);
+    line-height: 0.85;
+  }
+
+  .countdown-panel {
+    padding: 10px;
+    gap: 8px;
+    container-type: inline-size;
+  }
+
+  .timer-display {
+    min-height: 64px;
+    font-size: min(24cqw, 11vh);
+  }
+
+  .app-shell.timer-running .timer-display {
+    min-height: 0;
+    font-size: min(30cqw, 15vh);
+  }
+
+  .app-shell.timer-running .vs-mark {
+    font-size: min(14vw, 7vh);
+  }
+
+  .timer-controls .btn.small {
+    min-height: 42px;
+  }
+
+  /* ---- Modal di potret ----
+     Nama seperti "Mechabara" menetapkan lebar min-content tiap kartu; dua
+     kolom kartu berdampingan membuat isi panel 37px lebih lebar dari panelnya
+     sendiri, sehingga tombol Mulai/Batal menggantung di luar layar kanan. */
+  .picker-panel > * {
+    min-width: 0;
+  }
+
+  .newgame-teams {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .newgame-vs {
+    justify-self: center;
+    font-size: 0.9rem;
+  }
+
+  .newgame-team-options {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .newgame-team-option {
+    min-width: 0;
+    padding: 8px 2px;
+  }
+
+  .newgame-team-option img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .newgame-team-option span {
+    font-size: 0.62rem;
+    line-height: 1.1;
+  }
+
+  .picker-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .picker-option {
+    grid-template-columns: 46px minmax(0, 1fr);
+    min-height: 72px;
+    font-size: 0.85rem;
+  }
+
+  .picker-option img {
+    width: 46px;
+    height: 46px;
+  }
+
+  .duration-time {
+    font-size: 2rem;
+  }
+}
+
+/* Keadaan terkokang tombol Reset Match: dibedakan lewat warna dan denyut,
+   bukan cuma teks, supaya terbaca sekilas di tengah pertandingan. */
+.btn.btn-armed {
+  background: linear-gradient(140deg, #c0392b, #e74c3c);
+  border-color: rgb(255 255 255 / 45%);
+  animation: pulse 620ms ease-in-out infinite alternate;
 }

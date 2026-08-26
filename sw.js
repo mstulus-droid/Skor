@@ -1,4 +1,4 @@
-const CACHE_NAME = "rhadzor-score-v13";
+const CACHE_NAME = "rhadzor-score-v14";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,7 +7,12 @@ const ASSETS = [
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-192.svg",
-  "./icons/icon-512.svg"
+  "./icons/icon-512.svg",
+  "./Almodo2.webp",
+  "./Mechabara.webp",
+  "./sanchi.webp",
+  "./Wulf.webp",
+  "./Owlnick.webp"
 ];
 
 self.addEventListener("install", (event) => {
